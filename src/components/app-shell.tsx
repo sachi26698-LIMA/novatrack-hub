@@ -1,0 +1,156 @@
+import { Link, useLocation } from "@tanstack/react-router";
+import { motion } from "framer-motion";
+import { useState, type ReactNode } from "react";
+import {
+  Bell, Building2, ChevronRight, CircleDollarSign, Cog, Home,
+  LineChart as LineIcon, Menu, ScanLine, Search, Sparkles, Users, Wallet, X,
+} from "lucide-react";
+import { AnimatedBackground } from "@/components/animated-background";
+import { BrandMark, Logo } from "@/components/brand";
+
+const NAV = [
+  { i: Home, l: "Overview", to: "/dashboard" },
+  { i: Users, l: "Workers", to: "/workers" },
+  { i: ScanLine, l: "Attendance", to: "/attendance" },
+  { i: Wallet, l: "Payroll", to: "/payroll" },
+  { i: Building2, l: "Projects", to: "/projects" },
+  { i: CircleDollarSign, l: "Revenue", to: "/dashboard" },
+  { i: LineIcon, l: "Reports", to: "/reports" },
+  { i: Cog, l: "Settings", to: "/dashboard" },
+] as const;
+
+export function AppShell({
+  title,
+  eyebrow,
+  subtitle,
+  actions,
+  children,
+}: {
+  title: ReactNode;
+  eyebrow?: string;
+  subtitle?: string;
+  actions?: ReactNode;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const { pathname } = useLocation();
+
+  return (
+    <div className="min-h-screen relative">
+      <AnimatedBackground />
+
+      <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 flex-col p-4 z-30">
+        <div className="glass-strong rounded-2xl flex-1 p-4 flex flex-col">
+          <BrandMark />
+          <nav className="mt-6 space-y-1">
+            {NAV.map((n) => {
+              const active = pathname.startsWith(n.to) && (n.to !== "/dashboard" || pathname === "/dashboard");
+              return (
+                <Link
+                  key={n.l}
+                  to={n.to}
+                  className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${
+                    active
+                      ? "text-foreground bg-white/5 neon-border"
+                      : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                  }`}
+                >
+                  <n.i className="h-4 w-4" />
+                  <span>{n.l}</span>
+                  {active && <ChevronRight className="ml-auto h-3.5 w-3.5 text-[color:var(--neon-cyan)]" />}
+                </Link>
+              );
+            })}
+          </nav>
+          <div className="mt-auto glass rounded-xl p-3 text-xs">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-[color:var(--neon-cyan)]" />
+              <span className="font-medium">AI Forecast ready</span>
+            </div>
+            <p className="mt-1 text-muted-foreground">Q4 revenue projected +14.2%</p>
+          </div>
+        </div>
+      </aside>
+
+      {open && (
+        <div className="lg:hidden fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-background/70 backdrop-blur-sm" onClick={() => setOpen(false)} />
+          <motion.aside
+            initial={{ x: -300 }} animate={{ x: 0 }} exit={{ x: -300 }}
+            className="absolute left-0 top-0 bottom-0 w-72 p-4"
+          >
+            <div className="glass-strong rounded-2xl h-full p-4 flex flex-col">
+              <div className="flex items-center justify-between">
+                <BrandMark />
+                <button onClick={() => setOpen(false)} className="p-2 rounded-lg glass">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <nav className="mt-6 space-y-1">
+                {NAV.map((n) => (
+                  <Link
+                    key={n.l}
+                    to={n.to}
+                    onClick={() => setOpen(false)}
+                    className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-white/5"
+                  >
+                    <n.i className="h-4 w-4" />
+                    {n.l}
+                  </Link>
+                ))}
+              </nav>
+            </div>
+          </motion.aside>
+        </div>
+      )}
+
+      <div className="lg:pl-64">
+        <header className="sticky top-0 z-20 p-4">
+          <div className="glass rounded-2xl px-3 sm:px-4 py-2.5 flex items-center gap-3">
+            <button className="lg:hidden p-2 rounded-lg glass" onClick={() => setOpen(true)}>
+              <Menu className="h-4 w-4" />
+            </button>
+            <div className="flex-1 flex items-center gap-2 glass rounded-xl px-3 py-1.5 max-w-md">
+              <Search className="h-4 w-4 text-muted-foreground" />
+              <input
+                placeholder="Search…"
+                className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
+              />
+              <kbd className="hidden sm:inline text-[10px] text-muted-foreground border border-white/10 rounded px-1.5 py-0.5">⌘K</kbd>
+            </div>
+            <button className="relative p-2 rounded-xl glass">
+              <Bell className="h-4 w-4" />
+              <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-[color:var(--neon-pink)] animate-pulse" />
+            </button>
+            <Link to="/" className="hidden sm:flex items-center gap-2 glass rounded-xl px-2.5 py-1.5">
+              <div className="h-7 w-7 rounded-full grid place-items-center text-xs font-bold"
+                   style={{ background: "linear-gradient(135deg, var(--neon-cyan), var(--neon-violet))" }}>
+                A
+              </div>
+              <div className="text-xs leading-tight">
+                <div className="font-medium">Admin</div>
+                <div className="text-muted-foreground">tracknova.app</div>
+              </div>
+            </Link>
+            <div className="sm:hidden"><Logo size={32} /></div>
+          </div>
+        </header>
+
+        <main className="p-4 sm:p-6 space-y-6">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
+            className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3"
+          >
+            <div>
+              {eyebrow && <div className="text-xs uppercase tracking-[0.2em] text-[color:var(--neon-cyan)]">{eyebrow}</div>}
+              <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight">{title}</h1>
+              {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+            </div>
+            {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+          </motion.div>
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+}
