@@ -1,12 +1,15 @@
-import { Link, useLocation } from "@tanstack/react-router";
+import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
-  Bell, Building2, ChevronRight, CircleDollarSign, Cog, Home,
+  Bell, Building2, ChevronRight, CircleDollarSign, Cog, Home, LogOut,
   LineChart as LineIcon, Menu, ScanLine, Search, Sparkles, Users, Wallet, X,
 } from "lucide-react";
 import { AnimatedBackground } from "@/components/animated-background";
 import { BrandMark, Logo } from "@/components/brand";
+import { useSession } from "@/hooks/use-session";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const NAV = [
   { i: Home, l: "Overview", to: "/dashboard" },
