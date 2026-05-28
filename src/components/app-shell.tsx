@@ -147,16 +147,19 @@ export function AppShell({
               <Bell className="h-4 w-4" />
               <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-[color:var(--neon-pink)] animate-pulse" />
             </button>
-            <Link to="/" className="hidden sm:flex items-center gap-2 glass rounded-xl px-2.5 py-1.5">
-              <div className="h-7 w-7 rounded-full grid place-items-center text-xs font-bold"
+            <div className="hidden sm:flex items-center gap-2 glass rounded-xl px-2.5 py-1.5">
+              <div className="h-7 w-7 rounded-full grid place-items-center text-xs font-bold uppercase"
                    style={{ background: "linear-gradient(135deg, var(--neon-cyan), var(--neon-violet))" }}>
-                A
+                {(user.email ?? "U").charAt(0)}
               </div>
-              <div className="text-xs leading-tight">
-                <div className="font-medium">Admin</div>
-                <div className="text-muted-foreground">tracknova.app</div>
+              <div className="text-xs leading-tight max-w-[140px] truncate">
+                <div className="font-medium truncate">{user.user_metadata?.full_name || user.email?.split("@")[0]}</div>
+                <div className="text-muted-foreground truncate">{user.email}</div>
               </div>
-            </Link>
+            </div>
+            <button onClick={handleLogout} className="p-2 rounded-xl glass hover:bg-white/5 transition" title="Sign out">
+              <LogOut className="h-4 w-4" />
+            </button>
             <div className="sm:hidden"><Logo size={32} /></div>
           </div>
         </header>
