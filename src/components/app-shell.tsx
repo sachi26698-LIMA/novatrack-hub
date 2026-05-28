@@ -1,12 +1,15 @@
-import { Link, useLocation } from "@tanstack/react-router";
+import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
-  Bell, Building2, ChevronRight, CircleDollarSign, Cog, Home,
+  Bell, Building2, ChevronRight, CircleDollarSign, Cog, Home, LogOut,
   LineChart as LineIcon, Menu, ScanLine, Search, Sparkles, Users, Wallet, X,
 } from "lucide-react";
 import { AnimatedBackground } from "@/components/animated-background";
 import { BrandMark, Logo } from "@/components/brand";
+import { useSession } from "@/hooks/use-session";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const NAV = [
   { i: Home, l: "Overview", to: "/dashboard" },
@@ -34,6 +37,28 @@ export function AppShell({
 }) {
   const [open, setOpen] = useState(false);
   const { pathname } = useLocation();
+  const { user, loading } = useSession();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && !user) navigate({ to: "/auth" });
+  }, [loading, user, navigate]);
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    toast.success("Signed out");
+    navigate({ to: "/" });
+  }
+
+  if (loading || !user) {
+    return (
+      <div className="min-h-screen relative grid place-items-center">
+        <AnimatedBackground />
+        <div className="text-sm text-muted-foreground animate-pulse">Loading workspace…</div>
+      </div>
+    );
+  }
+
 
   return (
     <div className="min-h-screen relative">
@@ -122,16 +147,19 @@ export function AppShell({
               <Bell className="h-4 w-4" />
               <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-[color:var(--neon-pink)] animate-pulse" />
             </button>
-            <Link to="/" className="hidden sm:flex items-center gap-2 glass rounded-xl px-2.5 py-1.5">
-              <div className="h-7 w-7 rounded-full grid place-items-center text-xs font-bold"
+            <div className="hidden sm:flex items-center gap-2 glass rounded-xl px-2.5 py-1.5">
+              <div className="h-7 w-7 rounded-full grid place-items-center text-xs font-bold uppercase"
                    style={{ background: "linear-gradient(135deg, var(--neon-cyan), var(--neon-violet))" }}>
-                A
+                {(user.email ?? "U").charAt(0)}
               </div>
-              <div className="text-xs leading-tight">
-                <div className="font-medium">Admin</div>
-                <div className="text-muted-foreground">tracknova.app</div>
+              <div className="text-xs leading-tight max-w-[140px] truncate">
+                <div className="font-medium truncate">{user.user_metadata?.full_name || user.email?.split("@")[0]}</div>
+                <div className="text-muted-foreground truncate">{user.email}</div>
               </div>
-            </Link>
+            </div>
+            <button onClick={handleLogout} className="p-2 rounded-xl glass hover:bg-white/5 transition" title="Sign out">
+              <LogOut className="h-4 w-4" />
+            </button>
             <div className="sm:hidden"><Logo size={32} /></div>
           </div>
         </header>
