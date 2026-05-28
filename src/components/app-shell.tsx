@@ -37,6 +37,28 @@ export function AppShell({
 }) {
   const [open, setOpen] = useState(false);
   const { pathname } = useLocation();
+  const { user, loading } = useSession();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && !user) navigate({ to: "/auth" });
+  }, [loading, user, navigate]);
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    toast.success("Signed out");
+    navigate({ to: "/" });
+  }
+
+  if (loading || !user) {
+    return (
+      <div className="min-h-screen relative grid place-items-center">
+        <AnimatedBackground />
+        <div className="text-sm text-muted-foreground animate-pulse">Loading workspace…</div>
+      </div>
+    );
+  }
+
 
   return (
     <div className="min-h-screen relative">
