@@ -2,7 +2,7 @@ import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { useEffect, useState, type ReactNode } from "react";
 import {
-  Bell, Building2, ChevronRight, CircleDollarSign, Cog, Home, LogOut,
+  Activity, Bell, Building2, ChevronRight, CircleDollarSign, Cog, Home, LogOut,
   LineChart as LineIcon, Menu, ScanLine, Search, Sparkles, Users, Wallet, X,
 } from "lucide-react";
 import { AnimatedBackground } from "@/components/animated-background";
@@ -10,6 +10,7 @@ import { BrandMark, Logo } from "@/components/brand";
 import { useSession } from "@/hooks/use-session";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { logActivity } from "@/lib/activity-log";
 
 const NAV = [
   { i: Home, l: "Overview", to: "/dashboard" },
@@ -19,6 +20,7 @@ const NAV = [
   { i: Building2, l: "Projects", to: "/projects" },
   { i: CircleDollarSign, l: "Revenue", to: "/dashboard" },
   { i: LineIcon, l: "Reports", to: "/reports" },
+  { i: Activity, l: "Activity", to: "/activity" },
   { i: Cog, l: "Settings", to: "/dashboard" },
 ] as const;
 
@@ -45,6 +47,7 @@ export function AppShell({
   }, [loading, user, navigate]);
 
   async function handleLogout() {
+    await logActivity("signed_out", "auth");
     await supabase.auth.signOut();
     toast.success("Signed out");
     navigate({ to: "/" });
