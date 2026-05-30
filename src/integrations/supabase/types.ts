@@ -47,6 +47,109 @@ export type Database = {
         }
         Relationships: []
       }
+      attendance_records: {
+        Row: {
+          check_in: string
+          check_out: string | null
+          created_at: string
+          hours: number | null
+          id: string
+          notes: string | null
+          owner_id: string
+          status: Database["public"]["Enums"]["attendance_status"]
+          worker_id: string
+        }
+        Insert: {
+          check_in?: string
+          check_out?: string | null
+          created_at?: string
+          hours?: number | null
+          id?: string
+          notes?: string | null
+          owner_id: string
+          status?: Database["public"]["Enums"]["attendance_status"]
+          worker_id: string
+        }
+        Update: {
+          check_in?: string
+          check_out?: string | null
+          created_at?: string
+          hours?: number | null
+          id?: string
+          notes?: string | null
+          owner_id?: string
+          status?: Database["public"]["Enums"]["attendance_status"]
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_records_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payroll_records: {
+        Row: {
+          base_amount: number
+          bonus: number
+          created_at: string
+          deductions: number
+          hours_worked: number
+          id: string
+          net_amount: number
+          owner_id: string
+          paid_at: string | null
+          period_end: string
+          period_start: string
+          status: Database["public"]["Enums"]["payroll_status"]
+          updated_at: string
+          worker_id: string
+        }
+        Insert: {
+          base_amount?: number
+          bonus?: number
+          created_at?: string
+          deductions?: number
+          hours_worked?: number
+          id?: string
+          net_amount?: number
+          owner_id: string
+          paid_at?: string | null
+          period_end: string
+          period_start: string
+          status?: Database["public"]["Enums"]["payroll_status"]
+          updated_at?: string
+          worker_id: string
+        }
+        Update: {
+          base_amount?: number
+          bonus?: number
+          created_at?: string
+          deductions?: number
+          hours_worked?: number
+          id?: string
+          net_amount?: number
+          owner_id?: string
+          paid_at?: string | null
+          period_end?: string
+          period_start?: string
+          status?: Database["public"]["Enums"]["payroll_status"]
+          updated_at?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_records_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -74,6 +177,93 @@ export type Database = {
         }
         Relationships: []
       }
+      project_assignments: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          project_id: string
+          worker_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          project_id: string
+          worker_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          project_id?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_assignments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_assignments_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          budget: number
+          client: string | null
+          created_at: string
+          description: string | null
+          end_date: string | null
+          id: string
+          name: string
+          owner_id: string
+          progress: number
+          spent: number
+          start_date: string | null
+          status: Database["public"]["Enums"]["project_status"]
+          updated_at: string
+        }
+        Insert: {
+          budget?: number
+          client?: string | null
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          name: string
+          owner_id: string
+          progress?: number
+          spent?: number
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["project_status"]
+          updated_at?: string
+        }
+        Update: {
+          budget?: number
+          client?: string | null
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          name?: string
+          owner_id?: string
+          progress?: number
+          spent?: number
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["project_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -95,6 +285,60 @@ export type Database = {
         }
         Relationships: []
       }
+      workers: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          department: string | null
+          email: string | null
+          full_name: string
+          hourly_rate: number
+          id: string
+          joined_at: string
+          monthly_salary: number
+          owner_id: string
+          phone: string | null
+          qr_code: string
+          role: string | null
+          status: Database["public"]["Enums"]["worker_status"]
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          department?: string | null
+          email?: string | null
+          full_name: string
+          hourly_rate?: number
+          id?: string
+          joined_at?: string
+          monthly_salary?: number
+          owner_id: string
+          phone?: string | null
+          qr_code?: string
+          role?: string | null
+          status?: Database["public"]["Enums"]["worker_status"]
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          department?: string | null
+          email?: string | null
+          full_name?: string
+          hourly_rate?: number
+          id?: string
+          joined_at?: string
+          monthly_salary?: number
+          owner_id?: string
+          phone?: string | null
+          qr_code?: string
+          role?: string | null
+          status?: Database["public"]["Enums"]["worker_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -110,6 +354,15 @@ export type Database = {
     }
     Enums: {
       app_role: "Admin" | "Manager" | "Supervisor" | "Worker"
+      attendance_status: "CheckedIn" | "CheckedOut"
+      payroll_status: "Draft" | "Approved" | "Paid"
+      project_status:
+        | "Planning"
+        | "Active"
+        | "OnHold"
+        | "Completed"
+        | "Cancelled"
+      worker_status: "Active" | "OnLeave" | "Inactive"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -238,6 +491,16 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["Admin", "Manager", "Supervisor", "Worker"],
+      attendance_status: ["CheckedIn", "CheckedOut"],
+      payroll_status: ["Draft", "Approved", "Paid"],
+      project_status: [
+        "Planning",
+        "Active",
+        "OnHold",
+        "Completed",
+        "Cancelled",
+      ],
+      worker_status: ["Active", "OnLeave", "Inactive"],
     },
   },
 } as const
