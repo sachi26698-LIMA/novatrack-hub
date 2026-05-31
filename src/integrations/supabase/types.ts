@@ -91,6 +91,134 @@ export type Database = {
           },
         ]
       }
+      company_settings: {
+        Row: {
+          address: string | null
+          company_name: string
+          created_at: string
+          currency: string
+          email: string | null
+          id: string
+          logo_url: string | null
+          owner_id: string
+          phone: string | null
+          theme: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          company_name?: string
+          created_at?: string
+          currency?: string
+          email?: string | null
+          id?: string
+          logo_url?: string | null
+          owner_id: string
+          phone?: string | null
+          theme?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          company_name?: string
+          created_at?: string
+          currency?: string
+          email?: string | null
+          id?: string
+          logo_url?: string | null
+          owner_id?: string
+          phone?: string | null
+          theme?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      leave_requests: {
+        Row: {
+          created_at: string
+          end_date: string
+          id: string
+          leave_type: Database["public"]["Enums"]["leave_type"]
+          owner_id: string
+          reason: string | null
+          reviewed_at: string | null
+          reviewer_id: string | null
+          start_date: string
+          status: Database["public"]["Enums"]["leave_status"]
+          updated_at: string
+          worker_id: string
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          id?: string
+          leave_type?: Database["public"]["Enums"]["leave_type"]
+          owner_id: string
+          reason?: string | null
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          start_date: string
+          status?: Database["public"]["Enums"]["leave_status"]
+          updated_at?: string
+          worker_id: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          id?: string
+          leave_type?: Database["public"]["Enums"]["leave_type"]
+          owner_id?: string
+          reason?: string | null
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          start_date?: string
+          status?: Database["public"]["Enums"]["leave_status"]
+          updated_at?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_requests_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          link: string | null
+          message: string | null
+          read_at: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          link?: string | null
+          message?: string | null
+          read_at?: string | null
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          link?: string | null
+          message?: string | null
+          read_at?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       payroll_records: {
         Row: {
           base_amount: number
@@ -264,6 +392,53 @@ export type Database = {
         }
         Relationships: []
       }
+      shifts: {
+        Row: {
+          created_at: string
+          end_time: string
+          id: string
+          notes: string | null
+          owner_id: string
+          role: string | null
+          shift_date: string
+          start_time: string
+          updated_at: string
+          worker_id: string
+        }
+        Insert: {
+          created_at?: string
+          end_time: string
+          id?: string
+          notes?: string | null
+          owner_id: string
+          role?: string | null
+          shift_date: string
+          start_time: string
+          updated_at?: string
+          worker_id: string
+        }
+        Update: {
+          created_at?: string
+          end_time?: string
+          id?: string
+          notes?: string | null
+          owner_id?: string
+          role?: string | null
+          shift_date?: string
+          start_time?: string
+          updated_at?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shifts_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -355,6 +530,8 @@ export type Database = {
     Enums: {
       app_role: "Admin" | "Manager" | "Supervisor" | "Worker"
       attendance_status: "CheckedIn" | "CheckedOut"
+      leave_status: "Pending" | "Approved" | "Rejected" | "Cancelled"
+      leave_type: "Annual" | "Sick" | "Unpaid" | "Casual" | "Other"
       payroll_status: "Draft" | "Approved" | "Paid"
       project_status:
         | "Planning"
@@ -492,6 +669,8 @@ export const Constants = {
     Enums: {
       app_role: ["Admin", "Manager", "Supervisor", "Worker"],
       attendance_status: ["CheckedIn", "CheckedOut"],
+      leave_status: ["Pending", "Approved", "Rejected", "Cancelled"],
+      leave_type: ["Annual", "Sick", "Unpaid", "Casual", "Other"],
       payroll_status: ["Draft", "Approved", "Paid"],
       project_status: [
         "Planning",

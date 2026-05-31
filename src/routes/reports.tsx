@@ -1,17 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
-import { Bot, FileBarChart2, Sparkles, TrendingUp } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Bot, FileBarChart2, FileSpreadsheet, Sparkles, TrendingUp } from "lucide-react";
 import {
   Area, AreaChart, Bar, BarChart, CartesianGrid, Cell,
   Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
 import { AppShell } from "@/components/app-shell";
 import { GlassCard } from "@/components/glass-card";
-import { primaryBtn, primaryBtnStyle } from "@/components/modal";
+import { Field, inputCls, primaryBtn, primaryBtnStyle } from "@/components/modal";
 import { useSession } from "@/hooks/use-session";
 import { listAttendance, listPayroll, listProjects, listWorkers } from "@/lib/queries";
 import { downloadReport } from "@/lib/pdf";
+import { exportXlsx } from "@/lib/xlsx-export";
 
 export const Route = createFileRoute("/reports")({
   head: () => ({
@@ -28,10 +29,21 @@ const tooltip = { background: "oklch(0.19 0.035 270 / 0.95)", border: "1px solid
 function ReportsPage() {
   const { user } = useSession();
   const enabled = !!user;
-  const { data: workers = [] } = useQuery({ queryKey: ["workers"], queryFn: listWorkers, enabled });
-  const { data: projects = [] } = useQuery({ queryKey: ["projects"], queryFn: listProjects, enabled });
-  const { data: payroll = [] } = useQuery({ queryKey: ["payroll"], queryFn: listPayroll, enabled });
-  const { data: attendance = [] } = useQuery({ queryKey: ["attendance"], queryFn: () => listAttendance(500), enabled });
+  const today = new Date();
+  const y0 = new Date(today.getFullYear(), 0, 1).toISOString().slice(0, 10);
+  const y1 = today.toISOString().slice(0, 10);
+  const [range, setRange] = useState({ from: y0, to: y1 });
+
+  const { data: workersAll = [] } = useQuery({ queryKey: ["workers"], queryFn: listWorkers, enabled });
+  const { data: projectsAll = [] } = useQuery({ queryKey: ["projects"], queryFn: listProjects, enabled });
+  const { data: payrollAll = [] } = useQuery({ queryKey: ["payroll"], queryFn: listPayroll, enabled });
+  const { data: attendanceAll = [] } = useQuery({ queryKey: ["attendance"], queryFn: () => listAttendance(500), enabled });
+
+  const inRange = (iso: string) => iso >= range.from && iso <= range.to + "T23:59:59";
+  const workers = workersAll;
+  const projects = projectsAll;
+  const payroll = useMemo(() => payrollAll.filter((p) => p.period_end >= range.from && p.period_end <= range.to), [payrollAll, range]);
+  const attendance = useMemo(() => attendanceAll.filter((a) => inRange(a.check_in)), [attendanceAll, range]);
 
   // Monthly net payout
   const monthly = useMemo(() => {
@@ -100,17 +112,69 @@ function ReportsPage() {
     ]);
   }
 
+  function exportExcel() {
+    exportXlsx([
+      {
+        name: "Workers", rows: workers.map((w) => ({
+          Name: w.full_name, Role: w.role, Department: w.department, Status: w.status,
+          "Monthly Salary": Number(w.monthly_salary), "Hourly Rate": Number(w.hourly_rate),
+          Phone: w.phone, Email: w.email,
+        })),
+      },
+      {
+        name: "Payroll", rows: payroll.map((p: any) => ({
+          Worker: p.workers?.full_name, "Period Start": p.period_start, "Period End": p.period_end,
+          Hours: Number(p.hours_worked), Base: Number(p.base_amount), Bonus: Number(p.bonus),
+          Deductions: Number(p.deductions), Net: Number(p.net_amount), Status: p.status,
+        })),
+      },
+      {
+        name: "Attendance", rows: attendance.map((a: any) => ({
+          Worker: a.workers?.full_name, "Check In": a.check_in, "Check Out": a.check_out,
+          Hours: Number(a.hours ?? 0), Status: a.status,
+        })),
+      },
+      {
+        name: "Projects", rows: projects.map((p) => ({
+          Name: p.name, Client: p.client, Status: p.status, Progress: p.progress,
+          Budget: Number(p.budget), Spent: Number(p.spent),
+          Start: p.start_date, End: p.end_date,
+        })),
+      },
+    ], `TrackNova-Report-${range.from}_${range.to}.xlsx`);
+  }
+
   return (
     <AppShell
       eyebrow="Insights"
       title={<>Reports & <span className="neon-text">analytics</span></>}
       subtitle="Live data from workers, attendance, payroll and projects."
       actions={
-        <button onClick={exportPdf} className={primaryBtn} style={primaryBtnStyle}>
-          <FileBarChart2 className="h-3.5 w-3.5" /> Export PDF
-        </button>
+        <>
+          <button onClick={exportExcel} className="glass rounded-xl px-3 py-2 text-xs inline-flex items-center gap-1.5 hover:bg-white/5">
+            <FileSpreadsheet className="h-3.5 w-3.5" /> Excel
+          </button>
+          <button onClick={exportPdf} className={primaryBtn} style={primaryBtnStyle}>
+            <FileBarChart2 className="h-3.5 w-3.5" /> PDF
+          </button>
+        </>
       }
     >
+      <GlassCard className="p-4">
+        <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
+          <Field label="From">
+            <input type="date" className={inputCls} value={range.from}
+              onChange={(e) => setRange({ ...range, from: e.target.value })} />
+          </Field>
+          <Field label="To">
+            <input type="date" className={inputCls} value={range.to}
+              onChange={(e) => setRange({ ...range, to: e.target.value })} />
+          </Field>
+          <div className="text-xs text-muted-foreground sm:ml-auto">
+            {payroll.length} payroll · {attendance.length} attendance in window
+          </div>
+        </div>
+      </GlassCard>
       <GlassCard glow="violet" className="overflow-hidden">
         <div className="flex flex-col md:flex-row md:items-center gap-4">
           <div className="flex-1">
