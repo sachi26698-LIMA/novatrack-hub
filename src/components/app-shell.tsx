@@ -2,11 +2,12 @@ import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { useEffect, useState, type ReactNode } from "react";
 import {
-  Activity, Bell, Building2, ChevronRight, CircleDollarSign, Cog, Home, LogOut,
+  Activity, Building2, CalendarClock, CalendarDays, ChevronRight, Cog, Home, LogOut,
   LineChart as LineIcon, Menu, ScanLine, Search, Sparkles, Users, Wallet, X,
 } from "lucide-react";
 import { AnimatedBackground } from "@/components/animated-background";
 import { BrandMark, Logo } from "@/components/brand";
+import { NotificationBell } from "@/components/notification-bell";
 import { useSession } from "@/hooks/use-session";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -16,12 +17,13 @@ const NAV = [
   { i: Home, l: "Overview", to: "/dashboard" },
   { i: Users, l: "Workers", to: "/workers" },
   { i: ScanLine, l: "Attendance", to: "/attendance" },
+  { i: CalendarDays, l: "Leave", to: "/leave" },
+  { i: CalendarClock, l: "Shifts", to: "/shifts" },
   { i: Wallet, l: "Payroll", to: "/payroll" },
   { i: Building2, l: "Projects", to: "/projects" },
-  { i: CircleDollarSign, l: "Revenue", to: "/dashboard" },
   { i: LineIcon, l: "Reports", to: "/reports" },
   { i: Activity, l: "Activity", to: "/activity" },
-  { i: Cog, l: "Settings", to: "/dashboard" },
+  { i: Cog, l: "Settings", to: "/settings" },
 ] as const;
 
 export function AppShell({
@@ -146,10 +148,7 @@ export function AppShell({
               />
               <kbd className="hidden sm:inline text-[10px] text-muted-foreground border border-white/10 rounded px-1.5 py-0.5">⌘K</kbd>
             </div>
-            <button className="relative p-2 rounded-xl glass">
-              <Bell className="h-4 w-4" />
-              <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-[color:var(--neon-pink)] animate-pulse" />
-            </button>
+            <NotificationBell />
             <div className="hidden sm:flex items-center gap-2 glass rounded-xl px-2.5 py-1.5">
               <div className="h-7 w-7 rounded-full grid place-items-center text-xs font-bold uppercase"
                    style={{ background: "linear-gradient(135deg, var(--neon-cyan), var(--neon-violet))" }}>
