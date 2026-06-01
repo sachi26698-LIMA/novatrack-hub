@@ -1,9 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { motion } from "framer-motion";
-import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Activity, Building2, ChevronRight, CircleDollarSign, ScanLine,
+  Activity, Building2, ChevronRight, CircleDollarSign, RefreshCw, ScanLine,
   TrendingUp, Users,
 } from "lucide-react";
 import {
@@ -59,6 +59,10 @@ function fmt(n: number) {
 function Dashboard() {
   const { user } = useSession();
   const enabled = !!user;
+  const qc = useQueryClient();
+  const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
+  const [flashKey, setFlashKey] = useState(0);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   const { data: workers = [] } = useQuery({ queryKey: ["workers"], queryFn: listWorkers, enabled });
   const { data: projects = [] } = useQuery({ queryKey: ["projects"], queryFn: listProjects, enabled });
@@ -77,6 +81,34 @@ function Dashboard() {
     },
     enabled,
   });
+
+  useEffect(() => {
+    if (!enabled) return;
+    if (channelRef.current) supabase.removeChannel(channelRef.current);
+
+    const TABLES: Record<string, string[]> = {
+      workers: ["workers"],
+      attendance_records: [["attendance", 500] as any, "attendance-recent"],
+      projects: ["projects"],
+      payroll_records: ["payroll"],
+      invoices: ["invoices"],
+      activity_logs: ["activity-recent"],
+    };
+
+    const channel = supabase
+      .channel("dashboard-realtime")
+      .on("postgres_changes", { event: "*", schema: "public" }, (payload) => {
+        const keys = TABLES[payload.table];
+        if (!keys) return;
+        keys.forEach((k) => qc.invalidateQueries({ queryKey: Array.isArray(k) ? k : [k] }));
+        setLastRefreshed(new Date());
+        setFlashKey((n) => n + 1);
+      })
+      .subscribe();
+
+    channelRef.current = channel;
+    return () => { supabase.removeChannel(channel); };
+  }, [enabled, qc]);
 
   const displayName = user?.user_metadata?.full_name
     ? user.user_metadata.full_name.split(" ")[0]
@@ -183,10 +215,25 @@ function Dashboard() {
       title={<>{greeting()}, <span className="neon-text">{displayName}</span></>}
       subtitle="Here's what's happening across your company today."
       actions={
-        <span className="inline-flex items-center gap-1.5 glass rounded-full px-3 py-1 text-xs">
-          <Activity className="h-3 w-3 text-[color:var(--neon-cyan)] animate-pulse" />
-          Live · auto-refresh
-        </span>
+        <div className="flex items-center gap-2">
+          <AnimatePresence mode="wait">
+            <motion.span
+              key={flashKey}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="hidden sm:inline-flex items-center gap-1.5 text-[10px] text-[color:var(--neon-cyan)]"
+            >
+              <RefreshCw className="h-3 w-3" />
+              {lastRefreshed.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+            </motion.span>
+          </AnimatePresence>
+          <span className="inline-flex items-center gap-1.5 glass rounded-full px-3 py-1 text-xs">
+            <Activity className="h-3 w-3 text-[color:var(--neon-cyan)] animate-pulse" />
+            Live · realtime
+          </span>
+        </div>
       }
     >
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -195,7 +242,18 @@ function Dashboard() {
             <div className="flex items-start justify-between">
               <div>
                 <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{k.l}</div>
-                <div className="mt-2 text-2xl sm:text-3xl font-bold">{k.v}</div>
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={`${k.l}-${k.v}`}
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 6 }}
+                    transition={{ duration: 0.25 }}
+                    className="mt-2 text-2xl sm:text-3xl font-bold"
+                  >
+                    {k.v}
+                  </motion.div>
+                </AnimatePresence>
                 <div className="mt-1 inline-flex items-center gap-1 text-xs text-[color:var(--neon-cyan)]">
                   <TrendingUp className="h-3 w-3" /> {k.d}
                 </div>
