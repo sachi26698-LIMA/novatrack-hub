@@ -1,6 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const InputSchema = z.object({
   workers: z.array(z.record(z.string(), z.unknown())).max(200),
@@ -11,11 +10,12 @@ const InputSchema = z.object({
 });
 
 export const generateInsights = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => InputSchema.parse(input))
   .handler(async ({ data }) => {
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      return { ok: false as const, error: "AI is not configured. Please set the OPENAI_API_KEY environment variable." };
+    }
 
     const prompt = `You are an enterprise workforce analyst. Given this snapshot of a company's workforce data, produce a concise executive briefing in clean Markdown with these sections (use ## headings):
 
@@ -42,34 +42,39 @@ Projects: ${JSON.stringify(data.projects).slice(0, 4000)}
 
 Keep total length under 600 words. Use concrete numbers from the data.`;
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: "You are a precise workforce analytics assistant. Always reply in Markdown." },
-          { role: "user", content: prompt },
-        ],
-      }),
-    });
+    try {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [
+            { role: "system", content: "You are a precise workforce analytics assistant. Always reply in Markdown." },
+            { role: "user", content: prompt },
+          ],
+        }),
+      });
 
-    if (res.status === 429) {
-      return { ok: false as const, error: "Rate limit reached. Try again in a minute." };
-    }
-    if (res.status === 402) {
-      return { ok: false as const, error: "AI credits exhausted. Please top up your workspace." };
-    }
-    if (!res.ok) {
-      const t = await res.text();
-      console.error("AI gateway error", res.status, t);
-      return { ok: false as const, error: `AI gateway error (${res.status})` };
-    }
+      if (res.status === 429) {
+        return { ok: false as const, error: "Rate limit reached. Try again in a minute." };
+      }
+      if (res.status === 402) {
+        return { ok: false as const, error: "OpenAI credits exhausted. Please check your API key billing." };
+      }
+      if (!res.ok) {
+        const t = await res.text();
+        console.error("OpenAI error", res.status, t);
+        return { ok: false as const, error: `AI error (${res.status})` };
+      }
 
-    const json = await res.json();
-    const text: string = json?.choices?.[0]?.message?.content ?? "No response.";
-    return { ok: true as const, text };
+      const json = await res.json();
+      const text: string = json?.choices?.[0]?.message?.content ?? "No response.";
+      return { ok: true as const, text };
+    } catch (err) {
+      console.error("AI fetch error", err);
+      return { ok: false as const, error: "Failed to reach AI service." };
+    }
   });

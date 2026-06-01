@@ -9,7 +9,6 @@ import { toast } from "sonner";
 import { AnimatedBackground } from "@/components/animated-background";
 import { BrandMark } from "@/components/brand";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 import { logActivity } from "@/lib/activity-log";
 
 export const Route = createFileRoute("/auth")({
@@ -155,22 +154,6 @@ function AuthPage() {
       const message = err instanceof Error ? err.message : "Authentication failed";
       void logActivity("auth_error", "auth", { mode, channel, message });
       toast.error(message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleGoogle() {
-    setLoading(true);
-    try {
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: `${window.location.origin}/dashboard`,
-      });
-      if (result.error) {
-        toast.error(
-          result.error instanceof Error ? result.error.message : "Google sign-in failed",
-        );
-      }
     } finally {
       setLoading(false);
     }
@@ -601,32 +584,6 @@ function AuthPage() {
               </motion.div>
             )}
           </AnimatePresence>
-
-          <div className="relative my-4">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full h-px bg-white/10" />
-            </div>
-            <div className="relative flex justify-center">
-              <span className="bg-background/0 px-2 text-[10px] uppercase tracking-widest text-muted-foreground">
-                or
-              </span>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleGoogle}
-            disabled={loading}
-            className="w-full inline-flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold glass hover:bg-white/5 transition disabled:opacity-60"
-          >
-            <svg className="h-4 w-4" viewBox="0 0 24 24">
-              <path
-                fill="#EA4335"
-                d="M12 11v3.2h5.4c-.2 1.4-1.6 4.2-5.4 4.2-3.3 0-5.9-2.7-5.9-6s2.7-6 5.9-6c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.7 4 14.6 3 12 3 6.9 3 2.8 7.1 2.8 12.2S6.9 21.4 12 21.4c6.9 0 9.4-4.8 9.4-7.3 0-.5 0-.9-.1-1.3H12z"
-              />
-            </svg>
-            Continue with Google
-          </button>
 
           <div className="flex items-center justify-center text-xs text-muted-foreground pt-4">
             <span className="inline-flex items-center gap-1">
