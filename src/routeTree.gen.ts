@@ -17,6 +17,7 @@ import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as PayrollRouteImport } from './routes/payroll'
 import { Route as LeaveRouteImport } from './routes/leave'
+import { Route as InsightsRouteImport } from './routes/insights'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -64,6 +65,11 @@ const LeaveRoute = LeaveRouteImport.update({
   path: '/leave',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InsightsRoute = InsightsRouteImport.update({
+  id: '/insights',
+  path: '/insights',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   id: '/forgot-password',
   path: '/forgot-password',
@@ -102,6 +108,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/insights': typeof InsightsRoute
   '/leave': typeof LeaveRoute
   '/payroll': typeof PayrollRoute
   '/projects': typeof ProjectsRoute
@@ -118,6 +125,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/insights': typeof InsightsRoute
   '/leave': typeof LeaveRoute
   '/payroll': typeof PayrollRoute
   '/projects': typeof ProjectsRoute
@@ -135,6 +143,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/insights': typeof InsightsRoute
   '/leave': typeof LeaveRoute
   '/payroll': typeof PayrollRoute
   '/projects': typeof ProjectsRoute
@@ -153,6 +162,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/dashboard'
     | '/forgot-password'
+    | '/insights'
     | '/leave'
     | '/payroll'
     | '/projects'
@@ -169,6 +179,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/dashboard'
     | '/forgot-password'
+    | '/insights'
     | '/leave'
     | '/payroll'
     | '/projects'
@@ -185,6 +196,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/dashboard'
     | '/forgot-password'
+    | '/insights'
     | '/leave'
     | '/payroll'
     | '/projects'
@@ -202,6 +214,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   DashboardRoute: typeof DashboardRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
+  InsightsRoute: typeof InsightsRoute
   LeaveRoute: typeof LeaveRoute
   PayrollRoute: typeof PayrollRoute
   ProjectsRoute: typeof ProjectsRoute
@@ -270,6 +283,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LeaveRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/insights': {
+      id: '/insights'
+      path: '/insights'
+      fullPath: '/insights'
+      preLoaderRoute: typeof InsightsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/forgot-password': {
       id: '/forgot-password'
       path: '/forgot-password'
@@ -322,6 +342,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   DashboardRoute: DashboardRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
+  InsightsRoute: InsightsRoute,
   LeaveRoute: LeaveRoute,
   PayrollRoute: PayrollRoute,
   ProjectsRoute: ProjectsRoute,
@@ -334,3 +355,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
