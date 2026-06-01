@@ -1,0 +1,5 @@
+- [New tables needed](new-tables.md) — tasks + attendance_corrections require SQL migration before features work
+- [Tasks feature](tasks-feature.md) — full tasks module at /tasks with graceful 42P01 error handling; uses queries-tasks.ts for all CRUD
+- [Supabase phone OTP](supabase-phone-otp.md) — real signInWithOtp/verifyOtp used; falls back gracefully if phone auth not configured in project
+- [Bulk payroll](bulk-payroll.md) — BulkPayrollModal uses createPayroll directly (not mutation callback) to enable sequential async; useQueryClient to invalidate after all records created
+- [Role persistence](role-persistence.md) — use-role.tsx reads user_roles table, falls back to user_metadata.role, auto-upserts into user_roles on first login

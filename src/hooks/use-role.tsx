@@ -18,25 +18,39 @@ export function useRole() {
     }
     let cancelled = false;
     setLoading(true);
-    supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: true })
-      .then(({ data }) => {
-        if (cancelled) return;
-        // Prefer Admin if user has multiple roles
-        const roles = (data ?? []).map((r) => r.role as AppRole);
-        const resolved =
-          roles.find((r) => r === "Admin") ??
-          roles[0] ??
-          null;
-        setRole(resolved);
-        setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
+
+    async function resolveRole() {
+      const { data } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user!.id)
+        .order("created_at", { ascending: true });
+
+      if (cancelled) return;
+
+      const roles = (data ?? []).map((r) => r.role as AppRole);
+      let resolved: AppRole | null =
+        roles.find((r) => r === "Admin") ?? roles[0] ?? null;
+
+      // Fallback: read role from user_metadata (set during signup)
+      if (!resolved) {
+        const metaRole = user!.user_metadata?.role as AppRole | undefined;
+        if (metaRole && ["Admin", "Manager", "Supervisor", "Worker"].includes(metaRole)) {
+          resolved = metaRole;
+          // Persist this role into user_roles so it's available next time
+          void supabase.from("user_roles").upsert(
+            { user_id: user!.id, role: metaRole },
+            { onConflict: "user_id" },
+          );
+        }
+      }
+
+      setRole(resolved);
+      setLoading(false);
+    }
+
+    resolveRole();
+    return () => { cancelled = true; };
   }, [user?.id, sessionLoading]);
 
   return {
@@ -44,5 +58,6 @@ export function useRole() {
     loading: loading || sessionLoading,
     isAdmin: role === "Admin",
     isManager: role === "Manager" || role === "Admin",
+    isSupervisor: role === "Supervisor" || role === "Manager" || role === "Admin",
   };
 }

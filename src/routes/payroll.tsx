@@ -2,7 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import {
-  Banknote, CheckCircle2, Download, FileText, IndianRupee, Receipt, Trash2, Wallet,
+  Banknote, CheckCircle2, Download, FileText, IndianRupee, Layers, Loader2, Receipt,
+  Trash2, Users, Wallet,
 } from "lucide-react";
 import {
   Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid,
@@ -44,6 +45,7 @@ function PayrollPage() {
     queryKey: ["workers"], queryFn: listWorkers, enabled: !!user,
   });
   const [open, setOpen] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const create = useMutation({
     mutationFn: createPayroll,
@@ -90,9 +92,17 @@ function PayrollPage() {
       title={<>Payroll <span className="neon-text">command</span></>}
       subtitle="Compute salaries from attendance and export PDF slips."
       actions={
-        <button onClick={() => setOpen(true)} className={primaryBtn} style={primaryBtnStyle}>
-          <Banknote className="h-3.5 w-3.5" /> Run payroll
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setBulkOpen(true)}
+            className="glass rounded-xl px-3 py-2 text-xs flex items-center gap-1.5 hover:bg-white/5 transition"
+          >
+            <Users className="h-3.5 w-3.5" /> Bulk run
+          </button>
+          <button onClick={() => setOpen(true)} className={primaryBtn} style={primaryBtnStyle}>
+            <Banknote className="h-3.5 w-3.5" /> Run payroll
+          </button>
+        </div>
       }
     >
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -209,6 +219,12 @@ function PayrollPage() {
         onSubmit={(v) => create.mutate(v)}
         saving={create.isPending}
       />
+      <BulkPayrollModal
+        open={bulkOpen} onClose={() => setBulkOpen(false)}
+        workers={workers}
+        ownerId={user?.id}
+        existingPayroll={payroll}
+      />
     </AppShell>
   );
 }
@@ -304,6 +320,181 @@ function RunPayrollModal({
           </button>
         </div>
       </form>
+    </Modal>
+  );
+}
+
+function BulkPayrollModal({
+  open, onClose, workers, ownerId, existingPayroll,
+}: {
+  open: boolean; onClose: () => void; workers: any[]; ownerId?: string;
+  existingPayroll: any[];
+}) {
+  const qc = useQueryClient();
+  const today = new Date();
+  const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10);
+  const lastOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().slice(0, 10);
+
+  const [period_start, setPeriodStart] = useState(firstOfMonth);
+  const [period_end, setPeriodEnd] = useState(lastOfMonth);
+  const [department, setDepartment] = useState("All");
+  const [bonus, setBonus] = useState(0);
+  const [deductions, setDeductions] = useState(0);
+  const [running, setRunning] = useState(false);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+
+  const departments = useMemo(
+    () => ["All", ...Array.from(new Set(workers.map((w) => w.department).filter(Boolean)))],
+    [workers],
+  );
+
+  const eligible = useMemo(() => {
+    const base = workers.filter((w) => w.status === "Active" && (department === "All" || w.department === department));
+    const existing = new Set(
+      existingPayroll
+        .filter((p) => p.period_start === period_start && p.period_end === period_end)
+        .map((p) => p.worker_id),
+    );
+    return base.filter((w) => !existing.has(w.id));
+  }, [workers, department, period_start, period_end, existingPayroll]);
+
+  const totalNet = eligible.reduce((s, w) => s + Number(w.monthly_salary ?? 0) + bonus - deductions, 0);
+
+  async function handleRun() {
+    if (!ownerId) return toast.error("Not signed in");
+    if (eligible.length === 0) return toast.error("No eligible workers for this period");
+    if (!confirm(`Create payroll records for ${eligible.length} worker${eligible.length !== 1 ? "s" : ""}?`)) return;
+
+    setRunning(true);
+    setProgress({ done: 0, total: eligible.length });
+    let errors = 0;
+
+    for (let i = 0; i < eligible.length; i++) {
+      const w = eligible[i];
+      const base = Number(w.monthly_salary ?? 0);
+      try {
+        await createPayroll({
+          owner_id: ownerId,
+          worker_id: w.id,
+          period_start,
+          period_end,
+          base_amount: base,
+          bonus,
+          deductions,
+          hours_worked: 0,
+          net_amount: base + bonus - deductions,
+        });
+      } catch {
+        errors++;
+      }
+      setProgress({ done: i + 1, total: eligible.length });
+    }
+
+    await qc.invalidateQueries({ queryKey: ["payroll"] });
+    await logActivity("bulk_payroll", "data", { count: eligible.length - errors });
+    setRunning(false);
+    setProgress(null);
+    if (errors === 0) {
+      toast.success(`Payroll created for ${eligible.length} worker${eligible.length !== 1 ? "s" : ""}`);
+      onClose();
+    } else {
+      toast.error(`${errors} record${errors !== 1 ? "s" : ""} failed. Others were created.`);
+    }
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} title="Bulk payroll run">
+      <div className="space-y-3">
+        <div className="glass rounded-xl px-3 py-2 text-xs text-muted-foreground flex items-center gap-2">
+          <Layers className="h-3.5 w-3.5 text-[color:var(--neon-cyan)]" />
+          Creates payroll records for all active workers using their monthly salary.
+          Workers who already have a record in this period are skipped.
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Period start">
+            <input type="date" className={inputCls} value={period_start}
+              onChange={(e) => setPeriodStart(e.target.value)} />
+          </Field>
+          <Field label="Period end">
+            <input type="date" className={inputCls} value={period_end}
+              onChange={(e) => setPeriodEnd(e.target.value)} />
+          </Field>
+        </div>
+
+        <Field label="Department">
+          <select className={inputCls} value={department}
+            onChange={(e) => setDepartment(e.target.value)}>
+            {departments.map((d) => <option key={d} value={d}>{d}</option>)}
+          </select>
+        </Field>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Bonus for all (₹)">
+            <input type="number" className={inputCls} value={bonus}
+              onChange={(e) => setBonus(+e.target.value)} />
+          </Field>
+          <Field label="Deductions for all (₹)">
+            <input type="number" className={inputCls} value={deductions}
+              onChange={(e) => setDeductions(+e.target.value)} />
+          </Field>
+        </div>
+
+        {/* Preview */}
+        <div className="glass rounded-xl px-4 py-3 space-y-1.5">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">Eligible workers</span>
+            <span className="font-semibold">{eligible.length}</span>
+          </div>
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">Total net payout</span>
+            <span className="font-semibold neon-text">{inr(totalNet)}</span>
+          </div>
+          {eligible.length > 0 && (
+            <div className="pt-1 max-h-28 overflow-y-auto scrollbar-thin space-y-1">
+              {eligible.map((w) => (
+                <div key={w.id} className="flex items-center justify-between text-[11px] text-muted-foreground">
+                  <span>{w.full_name}</span>
+                  <span>{inr(Number(w.monthly_salary ?? 0) + bonus - deductions)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Progress bar */}
+        {progress && (
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Processing…</span>
+              <span>{progress.done}/{progress.total}</span>
+            </div>
+            <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all"
+                style={{
+                  width: `${(progress.done / progress.total) * 100}%`,
+                  background: "linear-gradient(90deg, var(--neon-cyan), var(--neon-violet))",
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center justify-end gap-2 pt-2">
+          <button type="button" onClick={onClose} disabled={running}
+            className="glass rounded-xl px-3 py-2 text-xs">
+            Cancel
+          </button>
+          <button onClick={handleRun} disabled={running || saving || eligible.length === 0}
+            className={`${primaryBtn} disabled:opacity-50`} style={primaryBtnStyle}>
+            {running
+              ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Processing…</>
+              : <><Users className="h-3.5 w-3.5" /> Run for {eligible.length} worker{eligible.length !== 1 ? "s" : ""}</>
+            }
+          </button>
+        </div>
+      </div>
     </Modal>
   );
 }

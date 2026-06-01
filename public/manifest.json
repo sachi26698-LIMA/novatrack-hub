@@ -1,0 +1,26 @@
+{
+  "name": "TrackNova Enterprise OS",
+  "short_name": "TrackNova",
+  "description": "Enterprise workforce management — workers, projects, payroll, attendance and more.",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0c0a1a",
+  "theme_color": "#0ea5e9",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230c0a1a'/><text y='70' x='50' text-anchor='middle' font-size='60' fill='%230ea5e9'>T</text></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    { "name": "Dashboard", "url": "/dashboard", "description": "Open dashboard" },
+    { "name": "Workers",   "url": "/workers",   "description": "Manage workers" },
+    { "name": "Tasks",     "url": "/tasks",      "description": "View tasks" },
+    { "name": "Payroll",   "url": "/payroll",    "description": "Run payroll" }
+  ],
+  "screenshots": []
+}

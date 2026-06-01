@@ -2,8 +2,9 @@ import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { useEffect, useState, type ReactNode } from "react";
 import {
-  Activity, Building2, CalendarClock, CalendarDays, ChevronRight, Cog, FileText, Home, LogOut,
-  LineChart as LineIcon, Menu, ScanLine, Search, Sparkles, UserSquare2, Users, Wallet, X,
+  Activity, Building2, CalendarClock, CalendarDays, CheckSquare, ChevronRight, Cog,
+  FileText, Home, LogOut, LineChart as LineIcon, Menu, ScanLine, Search, Sparkles,
+  UserSquare2, Users, Wallet, X,
 } from "lucide-react";
 import { AnimatedBackground } from "@/components/animated-background";
 import { BrandMark, Logo } from "@/components/brand";
@@ -22,6 +23,7 @@ const NAV = [
   { i: CalendarClock, l: "Shifts", to: "/shifts" },
   { i: Wallet, l: "Payroll", to: "/payroll" },
   { i: Building2, l: "Projects", to: "/projects" },
+  { i: CheckSquare, l: "Tasks", to: "/tasks" },
   { i: UserSquare2, l: "Clients", to: "/clients" },
   { i: FileText, l: "Invoices", to: "/invoices" },
   { i: Sparkles, l: "AI Insights", to: "/insights" },
