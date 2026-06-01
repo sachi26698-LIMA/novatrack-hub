@@ -17,8 +17,11 @@ import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as PayrollRouteImport } from './routes/payroll'
 import { Route as LeaveRouteImport } from './routes/leave'
+import { Route as InvoicesRouteImport } from './routes/invoices'
+import { Route as InsightsRouteImport } from './routes/insights'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as ClientsRouteImport } from './routes/clients'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AttendanceRouteImport } from './routes/attendance'
 import { Route as ActivityRouteImport } from './routes/activity'
@@ -64,6 +67,16 @@ const LeaveRoute = LeaveRouteImport.update({
   path: '/leave',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InvoicesRoute = InvoicesRouteImport.update({
+  id: '/invoices',
+  path: '/invoices',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InsightsRoute = InsightsRouteImport.update({
+  id: '/insights',
+  path: '/insights',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   id: '/forgot-password',
   path: '/forgot-password',
@@ -72,6 +85,11 @@ const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClientsRoute = ClientsRouteImport.update({
+  id: '/clients',
+  path: '/clients',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -100,8 +118,11 @@ export interface FileRoutesByFullPath {
   '/activity': typeof ActivityRoute
   '/attendance': typeof AttendanceRoute
   '/auth': typeof AuthRoute
+  '/clients': typeof ClientsRoute
   '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/insights': typeof InsightsRoute
+  '/invoices': typeof InvoicesRoute
   '/leave': typeof LeaveRoute
   '/payroll': typeof PayrollRoute
   '/projects': typeof ProjectsRoute
@@ -116,8 +137,11 @@ export interface FileRoutesByTo {
   '/activity': typeof ActivityRoute
   '/attendance': typeof AttendanceRoute
   '/auth': typeof AuthRoute
+  '/clients': typeof ClientsRoute
   '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/insights': typeof InsightsRoute
+  '/invoices': typeof InvoicesRoute
   '/leave': typeof LeaveRoute
   '/payroll': typeof PayrollRoute
   '/projects': typeof ProjectsRoute
@@ -133,8 +157,11 @@ export interface FileRoutesById {
   '/activity': typeof ActivityRoute
   '/attendance': typeof AttendanceRoute
   '/auth': typeof AuthRoute
+  '/clients': typeof ClientsRoute
   '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/insights': typeof InsightsRoute
+  '/invoices': typeof InvoicesRoute
   '/leave': typeof LeaveRoute
   '/payroll': typeof PayrollRoute
   '/projects': typeof ProjectsRoute
@@ -151,8 +178,11 @@ export interface FileRouteTypes {
     | '/activity'
     | '/attendance'
     | '/auth'
+    | '/clients'
     | '/dashboard'
     | '/forgot-password'
+    | '/insights'
+    | '/invoices'
     | '/leave'
     | '/payroll'
     | '/projects'
@@ -167,8 +197,11 @@ export interface FileRouteTypes {
     | '/activity'
     | '/attendance'
     | '/auth'
+    | '/clients'
     | '/dashboard'
     | '/forgot-password'
+    | '/insights'
+    | '/invoices'
     | '/leave'
     | '/payroll'
     | '/projects'
@@ -183,8 +216,11 @@ export interface FileRouteTypes {
     | '/activity'
     | '/attendance'
     | '/auth'
+    | '/clients'
     | '/dashboard'
     | '/forgot-password'
+    | '/insights'
+    | '/invoices'
     | '/leave'
     | '/payroll'
     | '/projects'
@@ -200,8 +236,11 @@ export interface RootRouteChildren {
   ActivityRoute: typeof ActivityRoute
   AttendanceRoute: typeof AttendanceRoute
   AuthRoute: typeof AuthRoute
+  ClientsRoute: typeof ClientsRoute
   DashboardRoute: typeof DashboardRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
+  InsightsRoute: typeof InsightsRoute
+  InvoicesRoute: typeof InvoicesRoute
   LeaveRoute: typeof LeaveRoute
   PayrollRoute: typeof PayrollRoute
   ProjectsRoute: typeof ProjectsRoute
@@ -270,6 +309,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LeaveRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/invoices': {
+      id: '/invoices'
+      path: '/invoices'
+      fullPath: '/invoices'
+      preLoaderRoute: typeof InvoicesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/insights': {
+      id: '/insights'
+      path: '/insights'
+      fullPath: '/insights'
+      preLoaderRoute: typeof InsightsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/forgot-password': {
       id: '/forgot-password'
       path: '/forgot-password'
@@ -282,6 +335,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/clients': {
+      id: '/clients'
+      path: '/clients'
+      fullPath: '/clients'
+      preLoaderRoute: typeof ClientsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -320,8 +380,11 @@ const rootRouteChildren: RootRouteChildren = {
   ActivityRoute: ActivityRoute,
   AttendanceRoute: AttendanceRoute,
   AuthRoute: AuthRoute,
+  ClientsRoute: ClientsRoute,
   DashboardRoute: DashboardRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
+  InsightsRoute: InsightsRoute,
+  InvoicesRoute: InvoicesRoute,
   LeaveRoute: LeaveRoute,
   PayrollRoute: PayrollRoute,
   ProjectsRoute: ProjectsRoute,
@@ -334,13 +397,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
