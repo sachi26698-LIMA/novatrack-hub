@@ -17,6 +17,7 @@ import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as PayrollRouteImport } from './routes/payroll'
 import { Route as LeaveRouteImport } from './routes/leave'
+import { Route as InvoicesRouteImport } from './routes/invoices'
 import { Route as InsightsRouteImport } from './routes/insights'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -64,6 +65,11 @@ const PayrollRoute = PayrollRouteImport.update({
 const LeaveRoute = LeaveRouteImport.update({
   id: '/leave',
   path: '/leave',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InvoicesRoute = InvoicesRouteImport.update({
+  id: '/invoices',
+  path: '/invoices',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InsightsRoute = InsightsRouteImport.update({
@@ -116,6 +122,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/insights': typeof InsightsRoute
+  '/invoices': typeof InvoicesRoute
   '/leave': typeof LeaveRoute
   '/payroll': typeof PayrollRoute
   '/projects': typeof ProjectsRoute
@@ -134,6 +141,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/insights': typeof InsightsRoute
+  '/invoices': typeof InvoicesRoute
   '/leave': typeof LeaveRoute
   '/payroll': typeof PayrollRoute
   '/projects': typeof ProjectsRoute
@@ -153,6 +161,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/insights': typeof InsightsRoute
+  '/invoices': typeof InvoicesRoute
   '/leave': typeof LeaveRoute
   '/payroll': typeof PayrollRoute
   '/projects': typeof ProjectsRoute
@@ -173,6 +182,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/forgot-password'
     | '/insights'
+    | '/invoices'
     | '/leave'
     | '/payroll'
     | '/projects'
@@ -191,6 +201,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/forgot-password'
     | '/insights'
+    | '/invoices'
     | '/leave'
     | '/payroll'
     | '/projects'
@@ -209,6 +220,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/forgot-password'
     | '/insights'
+    | '/invoices'
     | '/leave'
     | '/payroll'
     | '/projects'
@@ -228,6 +240,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   InsightsRoute: typeof InsightsRoute
+  InvoicesRoute: typeof InvoicesRoute
   LeaveRoute: typeof LeaveRoute
   PayrollRoute: typeof PayrollRoute
   ProjectsRoute: typeof ProjectsRoute
@@ -294,6 +307,13 @@ declare module '@tanstack/react-router' {
       path: '/leave'
       fullPath: '/leave'
       preLoaderRoute: typeof LeaveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/invoices': {
+      id: '/invoices'
+      path: '/invoices'
+      fullPath: '/invoices'
+      preLoaderRoute: typeof InvoicesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/insights': {
@@ -364,6 +384,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   InsightsRoute: InsightsRoute,
+  InvoicesRoute: InvoicesRoute,
   LeaveRoute: LeaveRoute,
   PayrollRoute: PayrollRoute,
   ProjectsRoute: ProjectsRoute,
