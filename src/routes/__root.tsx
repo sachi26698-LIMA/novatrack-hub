@@ -124,15 +124,30 @@ function RootComponent() {
   );
 }
 
+// FIX: Only invalidate router/queries on meaningful auth events (not TOKEN_REFRESHED)
+// to prevent excessive refetching on every token refresh cycle.
+const INVALIDATING_EVENTS = new Set([
+  "SIGNED_IN",
+  "SIGNED_OUT",
+  "USER_UPDATED",
+  "PASSWORD_RECOVERY",
+]);
+
 function AuthSync() {
   const router = useRouter();
   const queryClient = useQueryClient();
+
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      router.invalidate();
-      queryClient.invalidateQueries();
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (INVALIDATING_EVENTS.has(event)) {
+        router.invalidate();
+        queryClient.invalidateQueries();
+      }
     });
     return () => subscription.unsubscribe();
   }, [router, queryClient]);
+
   return null;
 }

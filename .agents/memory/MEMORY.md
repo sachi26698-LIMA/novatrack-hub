@@ -3,3 +3,6 @@
 - [Supabase phone OTP](supabase-phone-otp.md) — real signInWithOtp/verifyOtp used; falls back gracefully if phone auth not configured in project
 - [Bulk payroll](bulk-payroll.md) — BulkPayrollModal uses createPayroll directly (not mutation callback) to enable sequential async; useQueryClient to invalidate after all records created
 - [Role persistence](role-persistence.md) — use-role.tsx reads user_roles table, falls back to user_metadata.role, auto-upserts into user_roles on first login
+- [Auth onConflict fix](auth-onconflict.md) — user_roles unique constraint is (user_id, role) not just user_id; always use onConflict: "user_id,role"
+- [Auth reset redirect](auth-reset-redirect.md) — forgot password must redirect to /reset-password not /dashboard; /forgot-password is the dedicated standalone page
+- [AuthSync optimization](authsync-optimization.md) — __root.tsx AuthSync must only invalidate on SIGNED_IN/SIGNED_OUT/USER_UPDATED, never TOKEN_REFRESHED; avoids excessive re-fetches

@@ -133,7 +133,19 @@ export async function getProfile(userId: string) {
   return data;
 }
 
-export async function updateProfile(userId: string, input: { full_name?: string; phone?: string; avatar_url?: string }) {
-  const { error } = await supabase.from("profiles").update(input).eq("id", userId);
+export async function upsertProfile(userId: string, input: {
+  full_name?: string;
+  phone?: string;
+  avatar_url?: string;
+  role?: string;
+}) {
+  const { error } = await supabase
+    .from("profiles")
+    .upsert({ id: userId, ...input, updated_at: new Date().toISOString() }, { onConflict: "id" });
   if (error) throw error;
+}
+
+/** @deprecated use upsertProfile */
+export async function updateProfile(userId: string, input: { full_name?: string; phone?: string; avatar_url?: string; role?: string }) {
+  return upsertProfile(userId, input);
 }
