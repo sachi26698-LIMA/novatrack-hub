@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { AnimatedBackground } from "@/components/animated-background";
 import { BrandMark, Logo } from "@/components/brand";
+import { CommandPalette } from "@/components/command-palette";
 import { NotificationBell } from "@/components/notification-bell";
 import { useSession } from "@/hooks/use-session";
 import { supabase } from "@/integrations/supabase/client";
@@ -43,6 +44,7 @@ export function AppShell({
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const [cmdOpen, setCmdOpen] = useState(false);
   const { pathname } = useLocation();
   const { user, loading } = useSession();
   const navigate = useNavigate();
@@ -50,6 +52,17 @@ export function AppShell({
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth" });
   }, [loading, user, navigate]);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setCmdOpen((v) => !v);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   async function handleLogout() {
     await logActivity("signed_out", "auth");
@@ -71,6 +84,7 @@ export function AppShell({
   return (
     <div className="min-h-screen relative">
       <AnimatedBackground />
+      <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} />
 
       <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 w-64 flex-col p-4 z-30">
         <div className="glass-strong rounded-2xl flex-1 p-4 flex flex-col">
@@ -143,14 +157,14 @@ export function AppShell({
             <button className="lg:hidden p-2 rounded-lg glass" onClick={() => setOpen(true)}>
               <Menu className="h-4 w-4" />
             </button>
-            <div className="flex-1 flex items-center gap-2 glass rounded-xl px-3 py-1.5 max-w-md">
-              <Search className="h-4 w-4 text-muted-foreground" />
-              <input
-                placeholder="Search…"
-                className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
-              />
+            <button
+              onClick={() => setCmdOpen(true)}
+              className="flex-1 flex items-center gap-2 glass rounded-xl px-3 py-1.5 max-w-md text-left hover:bg-white/5 transition"
+            >
+              <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+              <span className="flex-1 text-sm text-muted-foreground/60">Search…</span>
               <kbd className="hidden sm:inline text-[10px] text-muted-foreground border border-white/10 rounded px-1.5 py-0.5">⌘K</kbd>
-            </div>
+            </button>
             <NotificationBell />
             <div className="hidden sm:flex items-center gap-2 glass rounded-xl px-2.5 py-1.5">
               <div className="h-7 w-7 rounded-full grid place-items-center text-xs font-bold uppercase"
