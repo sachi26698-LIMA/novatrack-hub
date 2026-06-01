@@ -10,5 +10,10 @@ export default defineConfig({
       port: 5000,
       allowedHosts: true,
     },
+    ssr: {
+      // Externalize ws so Vite SSR doesn't bundle it — Node.js loads it natively via require()
+      external: ["ws"],
+      noExternal: [],
+    },
   },
 });
