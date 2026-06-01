@@ -98,9 +98,9 @@ export function AppShell({
           <div className="mt-auto glass rounded-xl p-3 text-xs">
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-[color:var(--neon-cyan)]" />
-              <span className="font-medium">AI Forecast ready</span>
+              <span className="font-medium">AI Insights</span>
             </div>
-            <p className="mt-1 text-muted-foreground">Q4 revenue projected +14.2%</p>
+            <p className="mt-1 text-muted-foreground">Ask AI anything about your data.</p>
           </div>
         </div>
       </aside>

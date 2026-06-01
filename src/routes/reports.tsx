@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Bot, FileBarChart2, FileSpreadsheet, Sparkles, TrendingUp } from "lucide-react";
@@ -27,6 +27,7 @@ export const Route = createFileRoute("/reports")({
 const tooltip = { background: "oklch(0.19 0.035 270 / 0.95)", border: "1px solid oklch(1 0 0 / 0.12)", borderRadius: 12, fontSize: 12 };
 
 function ReportsPage() {
+  const navigate = useNavigate();
   const { user } = useSession();
   const enabled = !!user;
   const today = new Date();
@@ -191,7 +192,10 @@ function ReportsPage() {
             </div>
             <p className="text-xs text-muted-foreground mt-1">Drawn from {projects.length} projects and {payroll.length} payroll records.</p>
           </div>
-          <button className="inline-flex items-center gap-1.5 rounded-xl glass px-3 py-2 text-xs whitespace-nowrap">
+          <button
+            onClick={() => navigate({ to: "/insights" })}
+            className="inline-flex items-center gap-1.5 rounded-xl glass px-3 py-2 text-xs whitespace-nowrap hover:bg-white/10 transition"
+          >
             <Bot className="h-3.5 w-3.5" /> Ask AI
           </button>
         </div>
