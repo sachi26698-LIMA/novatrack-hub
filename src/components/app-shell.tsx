@@ -3,8 +3,8 @@ import { motion } from "framer-motion";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   Activity, Building2, CalendarClock, CalendarDays, CheckSquare, ChevronRight, Cog,
-  FileText, Home, LogOut, LineChart as LineIcon, Menu, ScanLine, Search, Sparkles,
-  UserSquare2, Users, Wallet, X,
+  FileText, Home, LogOut, LineChart as LineIcon, Megaphone, Menu, ScanLine, Search,
+  Sparkles, User, UserSquare2, Users, Wallet, X,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AnimatedBackground } from "@/components/animated-background";
@@ -17,20 +17,22 @@ import { toast } from "sonner";
 import { logActivity } from "@/lib/activity-log";
 
 const NAV = [
-  { i: Home,        l: "Overview",    to: "/dashboard" },
-  { i: Users,       l: "Workers",     to: "/workers" },
-  { i: ScanLine,    l: "Attendance",  to: "/attendance" },
-  { i: CalendarDays,l: "Leave",       to: "/leave" },
-  { i: CalendarClock,l:"Shifts",      to: "/shifts" },
-  { i: Wallet,      l: "Payroll",     to: "/payroll" },
-  { i: Building2,   l: "Projects",    to: "/projects" },
-  { i: CheckSquare, l: "Tasks",       to: "/tasks" },
-  { i: UserSquare2, l: "Clients",     to: "/clients" },
-  { i: FileText,    l: "Invoices",    to: "/invoices" },
-  { i: Sparkles,    l: "AI Insights", to: "/insights" },
-  { i: LineIcon,    l: "Reports",     to: "/reports" },
-  { i: Activity,    l: "Activity",    to: "/activity" },
-  { i: Cog,         l: "Settings",    to: "/settings" },
+  { i: Home,         l: "Overview",       to: "/dashboard" },
+  { i: User,         l: "My Workspace",   to: "/my" },
+  { i: Users,        l: "Workers",        to: "/workers" },
+  { i: ScanLine,     l: "Attendance",     to: "/attendance" },
+  { i: CalendarDays, l: "Leave",          to: "/leave" },
+  { i: CalendarClock,l: "Shifts",         to: "/shifts" },
+  { i: Wallet,       l: "Payroll",        to: "/payroll" },
+  { i: Building2,    l: "Projects",       to: "/projects" },
+  { i: CheckSquare,  l: "Tasks",          to: "/tasks" },
+  { i: Megaphone,    l: "Announcements",  to: "/announcements" },
+  { i: UserSquare2,  l: "Clients",        to: "/clients" },
+  { i: FileText,     l: "Invoices",       to: "/invoices" },
+  { i: Sparkles,     l: "AI Insights",    to: "/insights" },
+  { i: LineIcon,     l: "Reports",        to: "/reports" },
+  { i: Activity,     l: "Activity",       to: "/activity" },
+  { i: Cog,          l: "Settings",       to: "/settings" },
 ] as const;
 
 export function AppShell({

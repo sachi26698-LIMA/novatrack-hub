@@ -17,6 +17,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as PayrollRouteImport } from './routes/payroll'
+import { Route as MyRouteImport } from './routes/my'
 import { Route as LeaveRouteImport } from './routes/leave'
 import { Route as InvoicesRouteImport } from './routes/invoices'
 import { Route as InsightsRouteImport } from './routes/insights'
@@ -25,6 +26,7 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ClientsRouteImport } from './routes/clients'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AttendanceRouteImport } from './routes/attendance'
+import { Route as AnnouncementsRouteImport } from './routes/announcements'
 import { Route as ActivityRouteImport } from './routes/activity'
 import { Route as IndexRouteImport } from './routes/index'
 
@@ -68,6 +70,11 @@ const PayrollRoute = PayrollRouteImport.update({
   path: '/payroll',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MyRoute = MyRouteImport.update({
+  id: '/my',
+  path: '/my',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LeaveRoute = LeaveRouteImport.update({
   id: '/leave',
   path: '/leave',
@@ -108,6 +115,11 @@ const AttendanceRoute = AttendanceRouteImport.update({
   path: '/attendance',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AnnouncementsRoute = AnnouncementsRouteImport.update({
+  id: '/announcements',
+  path: '/announcements',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ActivityRoute = ActivityRouteImport.update({
   id: '/activity',
   path: '/activity',
@@ -122,6 +134,7 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/activity': typeof ActivityRoute
+  '/announcements': typeof AnnouncementsRoute
   '/attendance': typeof AttendanceRoute
   '/auth': typeof AuthRoute
   '/clients': typeof ClientsRoute
@@ -130,6 +143,7 @@ export interface FileRoutesByFullPath {
   '/insights': typeof InsightsRoute
   '/invoices': typeof InvoicesRoute
   '/leave': typeof LeaveRoute
+  '/my': typeof MyRoute
   '/payroll': typeof PayrollRoute
   '/projects': typeof ProjectsRoute
   '/reports': typeof ReportsRoute
@@ -142,6 +156,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/activity': typeof ActivityRoute
+  '/announcements': typeof AnnouncementsRoute
   '/attendance': typeof AttendanceRoute
   '/auth': typeof AuthRoute
   '/clients': typeof ClientsRoute
@@ -150,6 +165,7 @@ export interface FileRoutesByTo {
   '/insights': typeof InsightsRoute
   '/invoices': typeof InvoicesRoute
   '/leave': typeof LeaveRoute
+  '/my': typeof MyRoute
   '/payroll': typeof PayrollRoute
   '/projects': typeof ProjectsRoute
   '/reports': typeof ReportsRoute
@@ -163,6 +179,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/activity': typeof ActivityRoute
+  '/announcements': typeof AnnouncementsRoute
   '/attendance': typeof AttendanceRoute
   '/auth': typeof AuthRoute
   '/clients': typeof ClientsRoute
@@ -171,6 +188,7 @@ export interface FileRoutesById {
   '/insights': typeof InsightsRoute
   '/invoices': typeof InvoicesRoute
   '/leave': typeof LeaveRoute
+  '/my': typeof MyRoute
   '/payroll': typeof PayrollRoute
   '/projects': typeof ProjectsRoute
   '/reports': typeof ReportsRoute
@@ -185,6 +203,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/activity'
+    | '/announcements'
     | '/attendance'
     | '/auth'
     | '/clients'
@@ -193,6 +212,7 @@ export interface FileRouteTypes {
     | '/insights'
     | '/invoices'
     | '/leave'
+    | '/my'
     | '/payroll'
     | '/projects'
     | '/reports'
@@ -205,6 +225,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/activity'
+    | '/announcements'
     | '/attendance'
     | '/auth'
     | '/clients'
@@ -213,6 +234,7 @@ export interface FileRouteTypes {
     | '/insights'
     | '/invoices'
     | '/leave'
+    | '/my'
     | '/payroll'
     | '/projects'
     | '/reports'
@@ -225,6 +247,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/activity'
+    | '/announcements'
     | '/attendance'
     | '/auth'
     | '/clients'
@@ -233,6 +256,7 @@ export interface FileRouteTypes {
     | '/insights'
     | '/invoices'
     | '/leave'
+    | '/my'
     | '/payroll'
     | '/projects'
     | '/reports'
@@ -246,6 +270,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ActivityRoute: typeof ActivityRoute
+  AnnouncementsRoute: typeof AnnouncementsRoute
   AttendanceRoute: typeof AttendanceRoute
   AuthRoute: typeof AuthRoute
   ClientsRoute: typeof ClientsRoute
@@ -254,6 +279,7 @@ export interface RootRouteChildren {
   InsightsRoute: typeof InsightsRoute
   InvoicesRoute: typeof InvoicesRoute
   LeaveRoute: typeof LeaveRoute
+  MyRoute: typeof MyRoute
   PayrollRoute: typeof PayrollRoute
   ProjectsRoute: typeof ProjectsRoute
   ReportsRoute: typeof ReportsRoute
@@ -322,6 +348,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PayrollRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/my': {
+      id: '/my'
+      path: '/my'
+      fullPath: '/my'
+      preLoaderRoute: typeof MyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/leave': {
       id: '/leave'
       path: '/leave'
@@ -378,6 +411,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AttendanceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/announcements': {
+      id: '/announcements'
+      path: '/announcements'
+      fullPath: '/announcements'
+      preLoaderRoute: typeof AnnouncementsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/activity': {
       id: '/activity'
       path: '/activity'
@@ -398,6 +438,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ActivityRoute: ActivityRoute,
+  AnnouncementsRoute: AnnouncementsRoute,
   AttendanceRoute: AttendanceRoute,
   AuthRoute: AuthRoute,
   ClientsRoute: ClientsRoute,
@@ -406,6 +447,7 @@ const rootRouteChildren: RootRouteChildren = {
   InsightsRoute: InsightsRoute,
   InvoicesRoute: InvoicesRoute,
   LeaveRoute: LeaveRoute,
+  MyRoute: MyRoute,
   PayrollRoute: PayrollRoute,
   ProjectsRoute: ProjectsRoute,
   ReportsRoute: ReportsRoute,

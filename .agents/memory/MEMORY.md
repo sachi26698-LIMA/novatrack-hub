@@ -6,3 +6,5 @@
 - [Auth onConflict fix](auth-onconflict.md) — user_roles unique constraint is (user_id, role) not just user_id; always use onConflict: "user_id,role"
 - [Auth reset redirect](auth-reset-redirect.md) — forgot password must redirect to /reset-password not /dashboard; /forgot-password is the dedicated standalone page
 - [AuthSync optimization](authsync-optimization.md) — __root.tsx AuthSync must only invalidate on SIGNED_IN/SIGNED_OUT/USER_UPDATED, never TOKEN_REFRESHED; avoids excessive re-fetches
+- [Phase 2 features](phase2-features.md) — kanban board, calendar views, announcements, /my workspace, dashboard heatmap+leaderboard+tasks widget all shipped.
+- [New table pattern](new-table-pattern.md) — tables not in generated Supabase types use (supabase as any).from(...); catch code 42P01 and return [] for graceful degradation.

@@ -3,8 +3,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Activity, Building2, ChevronRight, CircleDollarSign, RefreshCw, ScanLine,
-  TrendingUp, Users,
+  Activity, Building2, CheckCircle2, ChevronRight, CircleDollarSign, RefreshCw,
+  ScanLine, Star, TrendingUp, Users,
 } from "lucide-react";
 import {
   Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart,
@@ -15,6 +15,7 @@ import { GlassCard } from "@/components/glass-card";
 import { useSession } from "@/hooks/use-session";
 import { listWorkers, listProjects, listAttendance, listPayroll } from "@/lib/queries";
 import { listInvoices } from "@/lib/queries-billing";
+import { listTasks } from "@/lib/queries-tasks";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/dashboard")({
@@ -69,6 +70,7 @@ function Dashboard() {
   const { data: payroll = [] } = useQuery({ queryKey: ["payroll"], queryFn: listPayroll, enabled });
   const { data: attendance = [] } = useQuery({ queryKey: ["attendance", 500], queryFn: () => listAttendance(500), enabled });
   const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: listInvoices, enabled });
+  const { data: tasks = [] } = useQuery({ queryKey: ["tasks"], queryFn: listTasks, enabled });
   const { data: activityLogs = [] } = useQuery({
     queryKey: ["activity-recent"],
     queryFn: async () => {
@@ -93,6 +95,7 @@ function Dashboard() {
       payroll_records: ["payroll"],
       invoices: ["invoices"],
       activity_logs: ["activity-recent"],
+      tasks: ["tasks"],
     };
 
     const channel = supabase
@@ -185,6 +188,44 @@ function Dashboard() {
   }, [projects]);
 
   const topProjects = useMemo(() => projects.slice(0, 4), [projects]);
+
+  // 28-day attendance heatmap
+  const heatmap28 = useMemo(() => {
+    return Array.from({ length: 28 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (27 - i));
+      const iso = d.toISOString().slice(0, 10);
+      const count = attendance.filter((a) => a.check_in?.slice(0, 10) === iso).length;
+      const pct = workers.length > 0 ? count / workers.length : 0;
+      return { iso, count, pct, dow: (d.getDay() + 6) % 7, day: d.getDate() };
+    });
+  }, [attendance, workers]);
+
+  // Top performers: workers with most attendance days in last 30 days
+  const topPerformers = useMemo(() => {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 30);
+    const cutoffStr = cutoff.toISOString().slice(0, 10);
+    const m = new Map<string, { worker: (typeof workers)[0]; days: number }>();
+    attendance.forEach((a) => {
+      if (!a.worker_id || a.check_in?.slice(0, 10)! < cutoffStr) return;
+      if (!m.has(a.worker_id)) {
+        const w = workers.find((x) => x.id === a.worker_id);
+        if (w) m.set(a.worker_id, { worker: w, days: 0 });
+      }
+      if (m.has(a.worker_id)) m.get(a.worker_id)!.days++;
+    });
+    return Array.from(m.values()).sort((a, b) => b.days - a.days).slice(0, 5);
+  }, [attendance, workers]);
+
+  // Task completion stats
+  const taskStats = useMemo(() => ({
+    total: tasks.length,
+    done: tasks.filter((t) => t.status === "Done").length,
+    inProgress: tasks.filter((t) => t.status === "InProgress").length,
+    blocked: tasks.filter((t) => t.status === "Blocked").length,
+    pct: tasks.length > 0 ? Math.round((tasks.filter((t) => t.status === "Done").length / tasks.length) * 100) : 0,
+  }), [tasks]);
 
   const kpis = [
     {
@@ -386,6 +427,122 @@ function Dashboard() {
                 </motion.li>
               ))}
             </ul>
+          )}
+        </GlassCard>
+      </div>
+
+      {/* New row: attendance heatmap + top performers + task stats */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* 28-day attendance heatmap */}
+        <GlassCard glow="cyan">
+          <div className="text-sm font-semibold mb-0.5">Attendance heatmap</div>
+          <div className="text-xs text-muted-foreground mb-4">Last 28 days · intensity = % present</div>
+          <div className="grid grid-cols-7 gap-1">
+            {["M","T","W","T","F","S","S"].map((d, i) => (
+              <div key={i} className="text-[9px] text-center text-muted-foreground/50 uppercase pb-1">{d}</div>
+            ))}
+            {Array.from({ length: heatmap28[0]?.dow ?? 0 }).map((_, i) => <div key={`pre-${i}`} />)}
+            {heatmap28.map((d) => (
+              <motion.div key={d.iso}
+                title={`${d.iso} · ${d.count} present (${Math.round(d.pct * 100)}%)`}
+                initial={{ scale: 0 }} animate={{ scale: 1 }}
+                transition={{ type: "spring", stiffness: 400 }}
+                className="aspect-square rounded-sm"
+                style={{
+                  background: d.pct > 0
+                    ? `oklch(0.78 0.18 200 / ${0.15 + d.pct * 0.85})`
+                    : "oklch(1 0 0 / 0.05)",
+                }}
+              />
+            ))}
+          </div>
+          <div className="flex items-center justify-between mt-3 text-[11px] text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-sm bg-[color:var(--neon-cyan)]" /> High
+              <span className="h-2 w-2 rounded-sm bg-white/8 ml-2" /> Low
+            </span>
+            <span>{heatmap28.filter((d) => d.count > 0).length}/28 active days</span>
+          </div>
+        </GlassCard>
+
+        {/* Top performers */}
+        <GlassCard glow="violet">
+          <div className="text-sm font-semibold mb-0.5 flex items-center gap-2">
+            <Star className="h-4 w-4 text-[color:var(--neon-violet)]" /> Top performers
+          </div>
+          <div className="text-xs text-muted-foreground mb-4">Most attendance days (last 30 days)</div>
+          {topPerformers.length === 0 ? (
+            <div className="py-8 text-center text-xs text-muted-foreground">No attendance data yet.</div>
+          ) : (
+            <div className="space-y-3">
+              {topPerformers.map(({ worker, days }, i) => {
+                const maxDays = topPerformers[0].days || 1;
+                const pct = (days / maxDays) * 100;
+                const initials = worker.full_name?.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase() ?? "?";
+                const MEDAL = ["🥇", "🥈", "🥉"];
+                return (
+                  <div key={worker.id} className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-xl grid place-items-center text-xs font-bold shrink-0"
+                      style={{ background: "linear-gradient(135deg, var(--neon-cyan), var(--neon-violet))", color: "oklch(0.1 0.03 270)" }}>
+                      {initials}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-medium truncate">{worker.full_name}</span>
+                        <span className="text-[10px] text-muted-foreground ml-2 shrink-0">
+                          {MEDAL[i] ?? `#${i + 1}`} {days}d
+                        </span>
+                      </div>
+                      <div className="h-1 rounded-full bg-white/5 overflow-hidden">
+                        <motion.div className="h-full rounded-full"
+                          style={{ background: "linear-gradient(90deg, var(--neon-cyan), var(--neon-violet))" }}
+                          initial={{ width: 0 }} animate={{ width: `${pct}%` }}
+                          transition={{ duration: 1, delay: i * 0.1 }} />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </GlassCard>
+
+        {/* Task completion */}
+        <GlassCard glow="pink">
+          <div className="text-sm font-semibold mb-0.5 flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-[color:var(--neon-pink)]" /> Task completion
+          </div>
+          <div className="text-xs text-muted-foreground mb-4">All time · across all workers</div>
+          {taskStats.total === 0 ? (
+            <div className="py-8 text-center text-xs text-muted-foreground">
+              No tasks yet. <Link to="/tasks" className="text-[color:var(--neon-cyan)] hover:underline">Add one →</Link>
+            </div>
+          ) : (
+            <>
+              <div className="text-center mb-4">
+                <div className="text-4xl font-bold neon-text">{taskStats.pct}%</div>
+                <div className="text-xs text-muted-foreground mt-1">completion rate</div>
+              </div>
+              <div className="h-2 rounded-full bg-white/5 overflow-hidden mb-4">
+                <motion.div className="h-full rounded-full"
+                  style={{ background: "linear-gradient(90deg, var(--neon-cyan), var(--neon-violet), var(--neon-pink))" }}
+                  initial={{ width: 0 }} animate={{ width: `${taskStats.pct}%` }}
+                  transition={{ duration: 1.2, ease: "easeOut" }} />
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                {[
+                  { l: "Done", v: taskStats.done, c: "var(--neon-violet)" },
+                  { l: "In Progress", v: taskStats.inProgress, c: "var(--neon-cyan)" },
+                  { l: "Blocked", v: taskStats.blocked, c: "var(--neon-pink)" },
+                  { l: "Total", v: taskStats.total, c: "oklch(0.72 0.03 260)" },
+                ].map((s) => (
+                  <div key={s.l} className="glass rounded-xl p-2 text-center">
+                    <div className="font-bold text-lg" style={{ color: s.c }}>{s.v}</div>
+                    <div className="text-muted-foreground text-[10px]">{s.l}</div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </GlassCard>
       </div>
