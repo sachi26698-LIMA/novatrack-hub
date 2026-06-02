@@ -21,7 +21,18 @@ function AuthPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && user) navigate({ to: "/dashboard" });
+    if (!loading && user) {
+      // Restore the page the user was trying to reach before being sent to auth
+      let dest = "/dashboard";
+      try {
+        const saved = localStorage.getItem("tk_redirect");
+        if (saved && saved !== "/auth" && saved !== "/") {
+          localStorage.removeItem("tk_redirect");
+          dest = saved;
+        }
+      } catch {}
+      navigate({ to: dest as "/" });
+    }
   }, [loading, user, navigate]);
 
   if (loading) {

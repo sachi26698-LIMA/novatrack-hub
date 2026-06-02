@@ -55,7 +55,11 @@ export function AppShell({
   const queryClient           = useQueryClient();
 
   useEffect(() => {
-    if (!loading && !user) navigate({ to: "/auth" });
+    if (!loading && !user) {
+      // Save intended destination so auth page can redirect back after login
+      try { localStorage.setItem("tk_redirect", window.location.pathname); } catch {}
+      navigate({ to: "/auth" });
+    }
   }, [loading, user, navigate]);
 
   useEffect(() => {
@@ -81,7 +85,8 @@ export function AppShell({
     }
   }
 
-  if (loading || !user) {
+  // Still checking session — show spinner
+  if (loading) {
     return (
       <div className="min-h-screen relative grid place-items-center">
         <AnimatedBackground />
@@ -93,6 +98,16 @@ export function AppShell({
           <div className="h-8 w-8 rounded-full border-2 border-t-[color:var(--neon-cyan)] border-white/10 animate-spin" />
           <p className="text-sm text-muted-foreground">Loading workspace…</p>
         </motion.div>
+      </div>
+    );
+  }
+
+  // Session resolved — no user. useEffect above is redirecting to /auth.
+  // Render just the background so there's no content flash.
+  if (!user) {
+    return (
+      <div className="min-h-screen relative">
+        <AnimatedBackground />
       </div>
     );
   }
