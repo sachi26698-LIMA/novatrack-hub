@@ -1,19 +1,17 @@
-// Replit Auth uses session cookies — no Bearer token needed.
-// This module is kept for compatibility but always returns null.
+import { supabase } from "@/integrations/supabase/client";
 
-type TokenRefresher = () => Promise<string | null>;
-
-let _refresher: TokenRefresher | null = null;
-
-export function setTokenRefresher(fn: TokenRefresher): void {
-  _refresher = fn;
-}
-
+/**
+ * Returns the current Supabase JWT access token, or null if not signed in.
+ * Used by apiFetch to send Authorization: Bearer headers to the API server.
+ */
 export async function getAuthToken(): Promise<string | null> {
-  if (!_refresher) return null;
   try {
-    return await _refresher();
+    const { data } = await supabase.auth.getSession();
+    return data?.session?.access_token ?? null;
   } catch {
     return null;
   }
 }
+
+// Legacy compat — no-op in the Supabase flow
+export function setTokenRefresher(_fn: () => Promise<string | null>): void {}

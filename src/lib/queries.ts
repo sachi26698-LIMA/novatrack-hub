@@ -63,8 +63,17 @@ export type Payroll = {
   workers?: { full_name: string; role: string | null; hourly_rate?: number } | null;
 };
 
+import { getAuthToken } from "./auth-token";
+
 async function apiFetch(path: string, options?: RequestInit) {
+  const token = await getAuthToken();
   const merged: RequestInit = { credentials: "include", ...options };
+  if (token) {
+    merged.headers = {
+      ...(options?.headers as Record<string, string> ?? {}),
+      Authorization: `Bearer ${token}`,
+    };
+  }
   const res = await fetch(path, merged);
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));

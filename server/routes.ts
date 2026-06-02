@@ -18,44 +18,51 @@ function parseCookies(cookieHeader: string | null): Record<string, string> {
 }
 
 async function requireUser(headers: Headers): Promise<AuthUser> {
-  const cookies = parseCookies(headers.get("cookie"));
-  const sessionToken = cookies["replit_session"] ?? cookies["__replit_session"] ?? cookies["REPL_AUTH"];
-
-  // Replit Auth: validate session via Replit's identity endpoint
-  const replId = process.env.REPL_ID;
-  if (sessionToken && replId) {
-    try {
-      const res = await fetch(`https://replit.com/api/v0/users/session`, {
-        headers: {
-          "Cookie": `replit_session=${sessionToken}`,
-          "X-Replit-User-Id": sessionToken,
-        },
-      });
-      if (res.ok) {
-        const data = await res.json() as { id?: string; username?: string; profileImage?: string };
-        if (data.id) {
-          return {
-            id: String(data.id),
-            name: data.username ?? String(data.id),
-            profileImage: data.profileImage ?? null,
+  // ── 1. Supabase JWT (Authorization: Bearer <token>) ──────────────────────
+  const authHeader = headers.get("authorization");
+  if (authHeader?.startsWith("Bearer ")) {
+    const token = authHeader.slice(7);
+    const supabaseUrl = process.env.VITE_SUPABASE_URL;
+    const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
+    if (supabaseUrl && supabaseKey) {
+      try {
+        const res = await fetch(`${supabaseUrl}/auth/v1/user`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            apikey: supabaseKey,
+          },
+        });
+        if (res.ok) {
+          const data = await res.json() as {
+            id?: string;
+            email?: string;
+            phone?: string;
+            user_metadata?: Record<string, unknown>;
           };
+          if (data.id) {
+            const meta = data.user_metadata ?? {};
+            return {
+              id: data.id,
+              name: String(meta.full_name ?? meta.name ?? data.email ?? data.phone ?? data.id),
+              profileImage: String(meta.avatar_url ?? meta.picture ?? ""),
+              phoneNumber: data.phone ?? null,
+            };
+          }
         }
-      }
-    } catch { /* fall through */ }
+      } catch { /* fall through */ }
+    }
   }
 
-  // Replit injects user info via request headers in the hosted environment
+  // ── 2. Replit injected headers (fallback / Replit-hosted environment) ────
   const userId = headers.get("x-replit-user-id");
   const userName = headers.get("x-replit-user-name");
   const userImage = headers.get("x-replit-user-profile-image");
-  const userRoles = headers.get("x-replit-user-roles");
 
   if (userId) {
     return {
       id: userId,
       name: userName ?? userId,
       profileImage: userImage ?? null,
-      phoneNumber: userRoles ?? null,
     };
   }
 

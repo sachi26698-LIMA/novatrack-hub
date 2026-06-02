@@ -1,17 +1,28 @@
-// Supabase is not used in this Replit deployment.
-// All data access goes through /api/* routes backed by Replit PostgreSQL.
-// This stub prevents import errors from files that still reference this module.
+import { createClient } from "@supabase/supabase-js";
 
-export const supabase = new Proxy({} as never, {
-  get(_target, prop) {
-    if (prop === "then") return undefined;
-    const noop: unknown = new Proxy(
-      (() => Promise.resolve({ data: null, error: null })) as unknown as object,
-      {
-        get: () => noop,
-        apply: () => Promise.resolve({ data: null, error: null }),
+const supabaseUrl = (import.meta.env?.VITE_SUPABASE_URL ?? "") as string;
+const supabaseAnonKey = (import.meta.env?.VITE_SUPABASE_ANON_KEY ?? "") as string;
+
+export const isSupabaseConfigured =
+  !!(supabaseUrl && supabaseAnonKey && supabaseUrl.startsWith("https://"));
+
+// Real client when configured; safe no-op proxy when keys are missing (SSR / not yet set)
+export const supabase = isSupabaseConfigured
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        storageKey: "tracknova_auth",
       },
-    );
-    return noop;
-  },
-});
+    })
+  : (new Proxy({} as never, {
+      get(_t, prop) {
+        if (prop === "then") return undefined;
+        const noop: unknown = new Proxy(
+          (() => Promise.resolve({ data: null, error: null })) as unknown as object,
+          { get: () => noop, apply: () => Promise.resolve({ data: null, error: null }) }
+        );
+        return noop;
+      },
+    }) as ReturnType<typeof createClient>);
