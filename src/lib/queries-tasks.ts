@@ -38,7 +38,7 @@ function isMissingTable(code: string) {
 
 export async function listTasks(): Promise<Task[]> {
   const { data, error } = await supabase
-    .from("tasks" as any)
+    .from("tasks")
     .select("*, workers(full_name, role), projects(name)")
     .order("created_at", { ascending: false });
   if (error) {
@@ -49,7 +49,7 @@ export async function listTasks(): Promise<Task[]> {
 }
 
 export async function createTask(input: TaskInsert): Promise<void> {
-  const { error } = await supabase.from("tasks" as any).insert(input);
+  const { error } = await supabase.from("tasks").insert(input);
   if (error) throw error;
 }
 
@@ -57,24 +57,25 @@ export async function updateTask(
   id: string,
   patch: Partial<Omit<TaskInsert, "owner_id"> & { status?: TaskStatus; completed_at?: string | null }>,
 ): Promise<void> {
-  const { error } = await supabase.from("tasks" as any).update(patch).eq("id", id);
+  const { error } = await supabase.from("tasks").update(patch).eq("id", id);
   if (error) throw error;
 }
 
 export async function deleteTask(id: string): Promise<void> {
-  const { error } = await supabase.from("tasks" as any).delete().eq("id", id);
+  const { error } = await supabase.from("tasks").delete().eq("id", id);
   if (error) throw error;
 }
 
 export async function markTaskDone(id: string): Promise<void> {
   const { error } = await supabase
-    .from("tasks" as any)
+    .from("tasks")
     .update({ status: "Done", completed_at: new Date().toISOString() })
     .eq("id", id);
   if (error) throw error;
 }
 
-// Attendance corrections
+// ─── Attendance Corrections ──────────────────────────────────────────────────
+
 export type AttendanceCorrection = {
   id: string;
   owner_id: string;
@@ -91,7 +92,7 @@ export type AttendanceCorrection = {
 
 export async function listCorrections(): Promise<AttendanceCorrection[]> {
   const { data, error } = await supabase
-    .from("attendance_corrections" as any)
+    .from("attendance_corrections")
     .select("*, workers(full_name)")
     .order("created_at", { ascending: false });
   if (error) {
@@ -109,7 +110,7 @@ export async function createCorrection(input: {
   requested_check_out?: string | null;
   reason: string;
 }): Promise<void> {
-  const { error } = await supabase.from("attendance_corrections" as any).insert(input);
+  const { error } = await supabase.from("attendance_corrections").insert(input);
   if (error) throw error;
 }
 
@@ -118,7 +119,7 @@ export async function reviewCorrection(
   status: "Approved" | "Rejected",
 ): Promise<void> {
   const { error } = await supabase
-    .from("attendance_corrections" as any)
+    .from("attendance_corrections")
     .update({ status, reviewed_at: new Date().toISOString() })
     .eq("id", id);
   if (error) throw error;

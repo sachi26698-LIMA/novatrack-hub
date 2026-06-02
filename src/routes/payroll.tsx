@@ -161,8 +161,8 @@ function PayrollPage() {
               {payroll.map((p) => (
                 <tr key={p.id} className="border-t border-white/5 hover:bg-white/[0.03]">
                   <td className="px-5 py-3 font-medium">
-                    {(p as any).workers?.full_name ?? "—"}
-                    <div className="text-[11px] text-muted-foreground">{(p as any).workers?.role ?? ""}</div>
+                    {p.workers?.full_name ?? "—"}
+                    <div className="text-[11px] text-muted-foreground">{p.workers?.role ?? ""}</div>
                   </td>
                   <td className="px-5 py-3 text-muted-foreground">{p.period_start} → {p.period_end}</td>
                   <td className="px-5 py-3">{p.hours_worked}</td>
@@ -179,8 +179,8 @@ function PayrollPage() {
                       <button title="PDF slip"
                         onClick={() => downloadPayslip({
                           id: p.id,
-                          workerName: (p as any).workers?.full_name ?? "Worker",
-                          workerRole: (p as any).workers?.role,
+                          workerName: p.workers?.full_name ?? "Worker",
+                          workerRole: p.workers?.role,
                           periodStart: p.period_start, periodEnd: p.period_end,
                           baseAmount: Number(p.base_amount), bonus: Number(p.bonus),
                           deductions: Number(p.deductions), netAmount: Number(p.net_amount),

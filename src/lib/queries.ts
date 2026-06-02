@@ -3,8 +3,12 @@ import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase
 
 export type Worker = Tables<"workers">;
 export type Project = Tables<"projects">;
-export type Attendance = Tables<"attendance_records">;
-export type Payroll = Tables<"payroll_records">;
+export type Attendance = Tables<"attendance_records"> & {
+  workers?: { full_name: string; role: string | null } | null;
+};
+export type Payroll = Tables<"payroll_records"> & {
+  workers?: { full_name: string; role: string | null; hourly_rate?: number } | null;
+};
 
 // ---------- WORKERS ----------
 export async function listWorkers() {

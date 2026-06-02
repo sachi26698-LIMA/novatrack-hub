@@ -76,7 +76,7 @@ function InvoicesPage() {
   async function exportPdf(id: string) {
     if (!company) return toast.error("Set company settings first");
     const { invoice, items } = await getInvoiceWithItems(id);
-    const c = invoice.clients as any;
+    const c = invoice.clients;
     downloadInvoice({
       invoiceNumber: invoice.invoice_number,
       issueDate: invoice.issue_date,

@@ -2,7 +2,9 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
 export type Client = Tables<"clients">;
-export type Invoice = Tables<"invoices">;
+export type Invoice = Tables<"invoices"> & {
+  clients?: Pick<Client, "name" | "company" | "email" | "phone" | "address"> | null;
+};
 export type InvoiceItem = Tables<"invoice_items">;
 
 // ---------- CLIENTS ----------

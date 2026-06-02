@@ -229,8 +229,8 @@ function AttendancePage() {
                       transition={{ delay: i * 0.02 }}
                       className="border-t border-white/5 hover:bg-white/[0.03] group">
                       <td className="px-5 py-3 font-medium">
-                        {(r as any).workers?.full_name ?? "—"}
-                        <div className="text-[11px] text-muted-foreground">{(r as any).workers?.role ?? ""}</div>
+                        {r.workers?.full_name ?? "—"}
+                        <div className="text-[11px] text-muted-foreground">{r.workers?.role ?? ""}</div>
                       </td>
                       <td className="px-5 py-3 text-muted-foreground">{new Date(r.check_in).toLocaleString()}</td>
                       <td className="px-5 py-3 text-muted-foreground">{r.check_out ? new Date(r.check_out).toLocaleString() : "—"}</td>
