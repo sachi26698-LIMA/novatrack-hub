@@ -101,7 +101,7 @@ function Landing() {
               className="inline-flex items-center gap-2 rounded-xl glass px-6 py-3 text-sm font-semibold hover:bg-white/5 transition"
             >
               <Fingerprint className="h-4 w-4" />
-              Sign in with OTP
+              Sign in
             </Link>
           </div>
 

@@ -12,7 +12,6 @@ import { BrandMark, Logo } from "@/components/brand";
 import { CommandPalette } from "@/components/command-palette";
 import { NotificationBell } from "@/components/notification-bell";
 import { useSession } from "@/hooks/use-session";
-import { signOutFirebase } from "@/lib/firebase-phone-auth";
 import { toast } from "sonner";
 import { logActivity } from "@/lib/activity-log";
 
@@ -51,7 +50,7 @@ export function AppShell({
   const [open, setOpen]       = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
   const { pathname }          = useLocation();
-  const { user, loading }     = useSession();
+  const { user, loading, logout } = useSession();
   const navigate              = useNavigate();
   const queryClient           = useQueryClient();
 
@@ -73,7 +72,7 @@ export function AppShell({
   async function handleLogout() {
     try {
       await logActivity("signed_out", "auth");
-      await signOutFirebase();
+      await logout();
       queryClient.clear();
       toast.success("Signed out");
       navigate({ to: "/auth" });
@@ -215,7 +214,11 @@ export function AppShell({
                     "linear-gradient(135deg, var(--neon-cyan), var(--neon-violet))",
                 }}
               >
-                {avatarLetter}
+                {user.profileImage ? (
+                  <img src={user.profileImage} alt={displayName} className="h-7 w-7 rounded-full object-cover" />
+                ) : (
+                  avatarLetter
+                )}
               </div>
               <div className="text-xs leading-tight max-w-[140px]">
                 <div className="font-medium truncate">{displayName}</div>

@@ -7,30 +7,59 @@ interface AuthUser {
   phoneNumber?: string | null;
 }
 
-async function requireUser(headers: Headers): Promise<AuthUser> {
-  const authHeader = headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) throw new Error("Unauthorized");
-  const token = authHeader.slice(7);
-  const apiKey = process.env.VITE_FIREBASE_API_KEY;
-  if (!apiKey) throw new Error("Firebase not configured on server");
-  const res = await fetch(
-    `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ idToken: token }),
-    },
+function parseCookies(cookieHeader: string | null): Record<string, string> {
+  if (!cookieHeader) return {};
+  return Object.fromEntries(
+    cookieHeader.split(";").map((c) => {
+      const [k, ...v] = c.trim().split("=");
+      return [k.trim(), decodeURIComponent(v.join("="))];
+    }),
   );
-  if (!res.ok) throw new Error("Unauthorized");
-  const data = await res.json() as { users?: Array<{ localId: string; phoneNumber?: string; displayName?: string; photoUrl?: string }> };
-  const fbUser = data.users?.[0];
-  if (!fbUser) throw new Error("Unauthorized");
-  return {
-    id: fbUser.localId,
-    name: fbUser.phoneNumber ?? fbUser.displayName ?? fbUser.localId,
-    profileImage: fbUser.photoUrl ?? null,
-    phoneNumber: fbUser.phoneNumber ?? null,
-  };
+}
+
+async function requireUser(headers: Headers): Promise<AuthUser> {
+  const cookies = parseCookies(headers.get("cookie"));
+  const sessionToken = cookies["replit_session"] ?? cookies["__replit_session"] ?? cookies["REPL_AUTH"];
+
+  // Replit Auth: validate session via Replit's identity endpoint
+  const replId = process.env.REPL_ID;
+  if (sessionToken && replId) {
+    try {
+      const res = await fetch(`https://replit.com/api/v0/users/session`, {
+        headers: {
+          "Cookie": `replit_session=${sessionToken}`,
+          "X-Replit-User-Id": sessionToken,
+        },
+      });
+      if (res.ok) {
+        const data = await res.json() as { id?: string; username?: string; profileImage?: string };
+        if (data.id) {
+          return {
+            id: String(data.id),
+            name: data.username ?? String(data.id),
+            profileImage: data.profileImage ?? null,
+          };
+        }
+      }
+    } catch { /* fall through */ }
+  }
+
+  // Replit injects user info via request headers in the hosted environment
+  const userId = headers.get("x-replit-user-id");
+  const userName = headers.get("x-replit-user-name");
+  const userImage = headers.get("x-replit-user-profile-image");
+  const userRoles = headers.get("x-replit-user-roles");
+
+  if (userId) {
+    return {
+      id: userId,
+      name: userName ?? userId,
+      profileImage: userImage ?? null,
+      phoneNumber: userRoles ?? null,
+    };
+  }
+
+  throw new Error("Unauthorized");
 }
 
 function json(data: unknown, status = 200) {
@@ -59,17 +88,36 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
   const method = req.method;
 
   // ─── Auth ────────────────────────────────────────────────────────────────────
+  if (path === "/api/auth/login") {
+    // Redirect to Replit OAuth
+    const callbackUrl = encodeURIComponent(`${new URL(req.url).origin}/api/auth/callback`);
+    return Response.redirect(`https://replit.com/auth_with_repl_site?domain=${new URL(req.url).hostname}&redirect_uri=${callbackUrl}`);
+  }
+
+  if (path === "/api/auth/callback") {
+    // After Replit Auth, user headers are injected — redirect to dashboard
+    return Response.redirect(new URL("/dashboard", req.url).href);
+  }
+
+  if (path === "/api/auth/logout" && method === "POST") {
+    return new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "Set-Cookie": "replit_session=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax",
+      },
+    });
+  }
+
   if (path === "/api/auth/session") {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) return json({ user: null });
     try {
       const user = await requireUser(req.headers);
-      // Upsert profile so the profiles table stays in sync with Firebase UID
+      // Upsert profile so the profiles table stays in sync with Replit user
       await query(
-        `INSERT INTO profiles (id, full_name, phone, role, updated_at)
-         VALUES ($1,$2,$3,'Worker',NOW())
-         ON CONFLICT (id) DO UPDATE SET full_name=EXCLUDED.full_name, phone=EXCLUDED.phone, updated_at=NOW()`,
-        [user.id, user.name, user.phoneNumber ?? null],
+        `INSERT INTO profiles (id, full_name, role, updated_at)
+         VALUES ($1,$2,'Worker',NOW())
+         ON CONFLICT (id) DO UPDATE SET full_name=EXCLUDED.full_name, updated_at=NOW()`,
+        [user.id, user.name],
       );
       return json({ user });
     } catch {

@@ -1,3 +1,6 @@
+// Replit Auth uses session cookies — no Bearer token needed.
+// This module is kept for compatibility but always returns null.
+
 type TokenRefresher = () => Promise<string | null>;
 
 let _refresher: TokenRefresher | null = null;
