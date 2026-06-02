@@ -1,5 +1,3 @@
-import { supabase } from "@/integrations/supabase/client";
-
 export type TaskStatus = "Todo" | "InProgress" | "Done" | "Blocked";
 export type TaskPriority = "Low" | "Medium" | "High" | "Urgent";
 
@@ -21,7 +19,6 @@ export type Task = {
 };
 
 export type TaskInsert = {
-  owner_id: string;
   project_id?: string | null;
   worker_id?: string | null;
   title: string;
@@ -30,51 +27,6 @@ export type TaskInsert = {
   priority?: TaskPriority;
   due_date?: string | null;
 };
-
-// Table might not exist yet — return empty array gracefully
-function isMissingTable(code: string) {
-  return code === "42P01" || code === "PGRST116" || code === "PGRST204";
-}
-
-export async function listTasks(): Promise<Task[]> {
-  const { data, error } = await supabase
-    .from("tasks")
-    .select("*, workers(full_name, role), projects(name)")
-    .order("created_at", { ascending: false });
-  if (error) {
-    if (isMissingTable(error.code ?? "")) return [];
-    throw error;
-  }
-  return (data ?? []) as Task[];
-}
-
-export async function createTask(input: TaskInsert): Promise<void> {
-  const { error } = await supabase.from("tasks").insert(input);
-  if (error) throw error;
-}
-
-export async function updateTask(
-  id: string,
-  patch: Partial<Omit<TaskInsert, "owner_id"> & { status?: TaskStatus; completed_at?: string | null }>,
-): Promise<void> {
-  const { error } = await supabase.from("tasks").update(patch).eq("id", id);
-  if (error) throw error;
-}
-
-export async function deleteTask(id: string): Promise<void> {
-  const { error } = await supabase.from("tasks").delete().eq("id", id);
-  if (error) throw error;
-}
-
-export async function markTaskDone(id: string): Promise<void> {
-  const { error } = await supabase
-    .from("tasks")
-    .update({ status: "Done", completed_at: new Date().toISOString() })
-    .eq("id", id);
-  if (error) throw error;
-}
-
-// ─── Attendance Corrections ──────────────────────────────────────────────────
 
 export type AttendanceCorrection = {
   id: string;
@@ -90,57 +42,87 @@ export type AttendanceCorrection = {
   workers?: { full_name: string } | null;
 };
 
-export async function listCorrections(): Promise<AttendanceCorrection[]> {
-  const { data, error } = await supabase
-    .from("attendance_corrections")
-    .select("*, workers(full_name)")
-    .order("created_at", { ascending: false });
-  if (error) {
-    if (isMissingTable(error.code ?? "")) return [];
-    throw error;
+async function apiFetch(path: string, options?: RequestInit) {
+  const res = await fetch(path, options);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? `HTTP ${res.status}`);
   }
-  return (data ?? []) as AttendanceCorrection[];
+  return res.json();
+}
+
+export async function listTasks(): Promise<Task[]> {
+  return apiFetch("/api/tasks");
+}
+
+export async function createTask(input: TaskInsert): Promise<void> {
+  await apiFetch("/api/tasks", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateTask(
+  id: string,
+  patch: Partial<TaskInsert & { status?: TaskStatus; completed_at?: string | null }>,
+): Promise<void> {
+  await apiFetch(`/api/tasks/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function deleteTask(id: string): Promise<void> {
+  await apiFetch(`/api/tasks/${id}`, { method: "DELETE" });
+}
+
+export async function markTaskDone(id: string): Promise<void> {
+  await apiFetch(`/api/tasks/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status: "Done", completed_at: new Date().toISOString() }),
+  });
+}
+
+// ─── Attendance Corrections ──────────────────────────────────────────────────
+export async function listCorrections(): Promise<AttendanceCorrection[]> {
+  return apiFetch("/api/corrections");
 }
 
 export async function createCorrection(input: {
-  owner_id: string;
   attendance_id?: string | null;
   worker_id: string;
   requested_check_in?: string | null;
   requested_check_out?: string | null;
   reason: string;
 }): Promise<void> {
-  const { error } = await supabase.from("attendance_corrections").insert(input);
-  if (error) throw error;
+  await apiFetch("/api/corrections", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
 }
 
-export async function reviewCorrection(
-  id: string,
-  status: "Approved" | "Rejected",
-): Promise<void> {
-  const { error } = await supabase
-    .from("attendance_corrections")
-    .update({ status, reviewed_at: new Date().toISOString() })
-    .eq("id", id);
-  if (error) throw error;
+export async function reviewCorrection(id: string, status: "Approved" | "Rejected"): Promise<void> {
+  await apiFetch(`/api/corrections/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status }),
+  });
 }
 
-// Manual attendance entry
 export async function createManualAttendance(input: {
-  owner_id: string;
   worker_id: string;
   check_in: string;
   check_out?: string | null;
   hours?: number | null;
   status: "CheckedIn" | "CheckedOut";
 }): Promise<void> {
-  const { error } = await supabase.from("attendance_records").insert({
-    owner_id: input.owner_id,
-    worker_id: input.worker_id,
-    check_in: input.check_in,
-    check_out: input.check_out ?? null,
-    hours: input.hours ?? null,
-    status: input.status,
+  await apiFetch("/api/attendance", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
   });
-  if (error) throw error;
 }

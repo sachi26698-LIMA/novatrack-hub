@@ -1,40 +1,32 @@
 import { useEffect, useRef, useState } from "react";
-import type { Session, User } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
+
+export interface ReplitUser {
+  id: string;
+  name: string;
+  profileImage: string | null;
+}
 
 export function useSession() {
-  const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<ReplitUser | null>(null);
   const [loading, setLoading] = useState(true);
   const mounted = useRef(true);
 
   useEffect(() => {
     mounted.current = true;
-
-    // Subscribe FIRST so we never miss an event between subscribe and getSession
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, s) => {
-      if (!mounted.current) return;
-      setSession(s);
-      setUser(s?.user ?? null);
-      // Once the listener fires we have a definitive answer — stop loading
-      setLoading(false);
-    });
-
-    // Fetch current session; if the listener already fired this is a no-op
-    supabase.auth.getSession().then(({ data }) => {
-      if (!mounted.current) return;
-      setSession(data.session);
-      setUser(data.session?.user ?? null);
-      setLoading(false);
-    });
-
-    return () => {
-      mounted.current = false;
-      subscription.unsubscribe();
-    };
+    fetch("/api/auth/session")
+      .then((r) => r.json())
+      .then(({ user: u }: { user: ReplitUser | null }) => {
+        if (!mounted.current) return;
+        setUser(u);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (!mounted.current) return;
+        setUser(null);
+        setLoading(false);
+      });
+    return () => { mounted.current = false; };
   }, []);
 
-  return { session, user, loading };
+  return { user, loading, session: user ? { user } : null };
 }

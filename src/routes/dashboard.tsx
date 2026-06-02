@@ -16,8 +16,6 @@ import { useSession } from "@/hooks/use-session";
 import { listWorkers, listProjects, listAttendance, listPayroll } from "@/lib/queries";
 import { listInvoices } from "@/lib/queries-billing";
 import { listTasks } from "@/lib/queries-tasks";
-import { supabase } from "@/integrations/supabase/client";
-
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
     meta: [
@@ -63,7 +61,6 @@ function Dashboard() {
   const qc = useQueryClient();
   const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
   const [flashKey, setFlashKey] = useState(0);
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   const { data: workers = [] } = useQuery({ queryKey: ["workers"], queryFn: listWorkers, enabled });
   const { data: projects = [] } = useQuery({ queryKey: ["projects"], queryFn: listProjects, enabled });
@@ -74,43 +71,23 @@ function Dashboard() {
   const { data: activityLogs = [] } = useQuery({
     queryKey: ["activity-recent"],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("activity_logs")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(5);
-      return data ?? [];
+      const res = await fetch("/api/activity_logs?limit=5");
+      if (!res.ok) return [];
+      return res.json();
     },
     enabled,
   });
 
   useEffect(() => {
     if (!enabled) return;
-    if (channelRef.current) supabase.removeChannel(channelRef.current);
-
-    const TABLES: Record<string, string[]> = {
-      workers: ["workers"],
-      attendance_records: [["attendance", 500] as any, "attendance-recent"],
-      projects: ["projects"],
-      payroll_records: ["payroll"],
-      invoices: ["invoices"],
-      activity_logs: ["activity-recent"],
-      tasks: ["tasks"],
-    };
-
-    const channel = supabase
-      .channel("dashboard-realtime")
-      .on("postgres_changes", { event: "*", schema: "public" }, (payload) => {
-        const keys = TABLES[payload.table];
-        if (!keys) return;
-        keys.forEach((k) => qc.invalidateQueries({ queryKey: Array.isArray(k) ? k : [k] }));
-        setLastRefreshed(new Date());
-        setFlashKey((n) => n + 1);
-      })
-      .subscribe();
-
-    channelRef.current = channel;
-    return () => { supabase.removeChannel(channel); };
+    const interval = setInterval(() => {
+      qc.invalidateQueries({ queryKey: ["workers"] });
+      qc.invalidateQueries({ queryKey: ["attendance", 500] });
+      qc.invalidateQueries({ queryKey: ["activity-recent"] });
+      setLastRefreshed(new Date());
+      setFlashKey((n) => n + 1);
+    }, 30000);
+    return () => clearInterval(interval);
   }, [enabled, qc]);
 
   const displayName = user?.user_metadata?.full_name

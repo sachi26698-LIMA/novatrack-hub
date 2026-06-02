@@ -11,8 +11,6 @@ import { useSession } from "@/hooks/use-session";
 import { listWorkers, listAttendance, listPayroll } from "@/lib/queries";
 import { listLeave, listShifts } from "@/lib/queries-extra";
 import { listTasks } from "@/lib/queries-tasks";
-import { supabase } from "@/integrations/supabase/client";
-
 export const Route = createFileRoute("/my")({
   head: () => ({
     meta: [
@@ -56,8 +54,9 @@ function MyPage() {
   const { data: profile } = useQuery({
     queryKey: ["profile-me", user?.id],
     queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("*").eq("id", user!.id).maybeSingle();
-      return data;
+      const res = await fetch(`/api/profiles/${user!.id}`);
+      if (!res.ok) return null;
+      return res.json();
     },
     enabled,
   });

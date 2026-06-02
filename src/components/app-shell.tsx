@@ -12,8 +12,6 @@ import { BrandMark, Logo } from "@/components/brand";
 import { CommandPalette } from "@/components/command-palette";
 import { NotificationBell } from "@/components/notification-bell";
 import { useSession } from "@/hooks/use-session";
-import { supabase } from "@/integrations/supabase/client";
-import { signOutFirebase } from "@/lib/firebase-phone-auth";
 import { toast } from "sonner";
 import { logActivity } from "@/lib/activity-log";
 
@@ -56,12 +54,10 @@ export function AppShell({
   const navigate              = useNavigate();
   const queryClient           = useQueryClient();
 
-  // Redirect to /auth when not authenticated
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth" });
   }, [loading, user, navigate]);
 
-  // Global keyboard shortcut for command palette
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
@@ -76,10 +72,6 @@ export function AppShell({
   async function handleLogout() {
     try {
       await logActivity("signed_out", "auth");
-      await Promise.allSettled([
-        supabase.auth.signOut(),
-        signOutFirebase(),
-      ]);
       queryClient.clear();
       toast.success("Signed out");
       navigate({ to: "/" });
@@ -88,7 +80,6 @@ export function AppShell({
     }
   }
 
-  // Show loading/gate state while resolving session
   if (loading || !user) {
     return (
       <div className="min-h-screen relative grid place-items-center">
@@ -105,7 +96,7 @@ export function AppShell({
     );
   }
 
-  const displayName = user.user_metadata?.full_name || user.email?.split("@")[0] || "User";
+  const displayName = user.name || "User";
   const avatarLetter = displayName.charAt(0).toUpperCase();
 
   return (
@@ -201,7 +192,6 @@ export function AppShell({
               <Menu className="h-4 w-4" />
             </button>
 
-            {/* Search / Command */}
             <button
               onClick={() => setCmdOpen(true)}
               className="flex-1 flex items-center gap-2 glass rounded-xl px-3 py-1.5 max-w-md text-left hover:bg-white/5 transition"
@@ -215,7 +205,6 @@ export function AppShell({
 
             <NotificationBell />
 
-            {/* User chip */}
             <div className="hidden sm:flex items-center gap-2 glass rounded-xl px-2.5 py-1.5">
               <div
                 className="h-7 w-7 rounded-full grid place-items-center text-xs font-bold uppercase shrink-0"
@@ -228,11 +217,9 @@ export function AppShell({
               </div>
               <div className="text-xs leading-tight max-w-[140px]">
                 <div className="font-medium truncate">{displayName}</div>
-                <div className="text-muted-foreground truncate">{user.email}</div>
               </div>
             </div>
 
-            {/* Sign out */}
             <button
               onClick={handleLogout}
               className="p-2 rounded-xl glass hover:bg-white/5 transition"

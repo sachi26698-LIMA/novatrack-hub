@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
   Link,
@@ -7,9 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect } from "react";
 import { Toaster } from "@/components/ui/sonner";
-import { supabase } from "@/integrations/supabase/client";
 
 import appCss from "../styles.css?url";
 
@@ -20,7 +18,7 @@ function NotFoundComponent() {
         <h1 className="text-7xl font-bold text-foreground">404</h1>
         <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          The page you're looking for doesn't exist or has been moved.
+          The page you&apos;re looking for doesn&apos;t exist or has been moved.
         </p>
         <div className="mt-6">
           <Link
@@ -43,7 +41,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          This page didn't load
+          This page didn&apos;t load
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Something went wrong on our end. You can try refreshing or head back home.
@@ -117,37 +115,8 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthSync />
       <Outlet />
       <Toaster />
     </QueryClientProvider>
   );
-}
-
-// FIX: Only invalidate router/queries on meaningful auth events (not TOKEN_REFRESHED)
-// to prevent excessive refetching on every token refresh cycle.
-const INVALIDATING_EVENTS = new Set([
-  "SIGNED_IN",
-  "SIGNED_OUT",
-  "USER_UPDATED",
-  "PASSWORD_RECOVERY",
-]);
-
-function AuthSync() {
-  const router = useRouter();
-  const queryClient = useQueryClient();
-
-  useEffect(() => {
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event) => {
-      if (INVALIDATING_EVENTS.has(event)) {
-        router.invalidate();
-        queryClient.invalidateQueries();
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [router, queryClient]);
-
-  return null;
 }

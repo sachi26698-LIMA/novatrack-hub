@@ -3,7 +3,6 @@ import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { Activity, Filter, Shield, User as UserIcon, Database, LogIn } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
-import { supabase } from "@/integrations/supabase/client";
 import { useRole } from "@/hooks/use-role";
 
 export const Route = createFileRoute("/activity")({
@@ -55,18 +54,17 @@ function ActivityPage() {
     if (roleLoading) return;
     let cancelled = false;
     setLoading(true);
-    let q = supabase
-      .from("activity_logs")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(200);
-    if (cat !== "all") q = q.eq("category", cat);
-    q.then(({ data }) => {
-      if (!cancelled) {
-        setLogs((data ?? []) as LogRow[]);
-        setLoading(false);
-      }
-    });
+    const params = new URLSearchParams({ limit: "200" });
+    if (cat !== "all") params.set("category", cat);
+    fetch(`/api/activity_logs?${params}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (!cancelled) {
+          setLogs(Array.isArray(data) ? data : []);
+          setLoading(false);
+        }
+      })
+      .catch(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [cat, roleLoading]);
 

@@ -1,19 +1,25 @@
-import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import { defineConfig } from "vite";
+import { tanstackStart } from "@tanstack/react-start/plugin/vite";
+import viteTsConfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
-  tanstackStart: {
-    server: { entry: "server" },
+  plugins: [
+    viteTsConfigPaths({ projects: ["./tsconfig.json"] }),
+    tanstackStart(),
+  ],
+  server: {
+    host: "0.0.0.0",
+    port: 5000,
+    allowedHosts: true,
+    watch: {
+      ignored: ["**/node_modules/**", "**/.cache/**"],
+    },
   },
-  vite: {
-    server: {
-      host: "0.0.0.0",
-      port: 5000,
-      allowedHosts: true,
-    },
-    ssr: {
-      // Externalize ws so Vite SSR doesn't bundle it — Node.js loads it natively via require()
-      external: ["ws"],
-      noExternal: [],
-    },
+  ssr: {
+    external: ["pg", "pg-native", "net", "tls", "fs", "crypto", "stream", "path", "os", "util"],
+    noExternal: [],
+  },
+  optimizeDeps: {
+    exclude: ["pg", "pg-native"],
   },
 });
