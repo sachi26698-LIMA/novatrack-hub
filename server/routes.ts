@@ -1,11 +1,36 @@
 import { query } from "./db";
 
-function requireUser(headers: Headers): { id: string; name: string; profileImage: string | null } {
-  const id = headers.get("X-Replit-User-Id");
-  const name = headers.get("X-Replit-User-Name");
-  const profileImage = headers.get("X-Replit-User-Profile-Image");
-  if (!id || !name) throw new Error("Unauthorized");
-  return { id, name, profileImage };
+interface AuthUser {
+  id: string;
+  name: string;
+  profileImage: string | null;
+  phoneNumber?: string | null;
+}
+
+async function requireUser(headers: Headers): Promise<AuthUser> {
+  const authHeader = headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) throw new Error("Unauthorized");
+  const token = authHeader.slice(7);
+  const apiKey = process.env.VITE_FIREBASE_API_KEY;
+  if (!apiKey) throw new Error("Firebase not configured on server");
+  const res = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idToken: token }),
+    },
+  );
+  if (!res.ok) throw new Error("Unauthorized");
+  const data = await res.json() as { users?: Array<{ localId: string; phoneNumber?: string; displayName?: string; photoUrl?: string }> };
+  const fbUser = data.users?.[0];
+  if (!fbUser) throw new Error("Unauthorized");
+  return {
+    id: fbUser.localId,
+    name: fbUser.phoneNumber ?? fbUser.displayName ?? fbUser.localId,
+    profileImage: fbUser.photoUrl ?? null,
+    phoneNumber: fbUser.phoneNumber ?? null,
+  };
 }
 
 function json(data: unknown, status = 200) {
@@ -35,17 +60,27 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   // ─── Auth ────────────────────────────────────────────────────────────────────
   if (path === "/api/auth/session") {
-    const id = req.headers.get("X-Replit-User-Id");
-    const name = req.headers.get("X-Replit-User-Name");
-    const profileImage = req.headers.get("X-Replit-User-Profile-Image");
-    if (!id || !name) return json({ user: null });
-    return json({ user: { id, name, profileImage } });
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) return json({ user: null });
+    try {
+      const user = await requireUser(req.headers);
+      // Upsert profile so the profiles table stays in sync with Firebase UID
+      await query(
+        `INSERT INTO profiles (id, full_name, phone, role, updated_at)
+         VALUES ($1,$2,$3,'Worker',NOW())
+         ON CONFLICT (id) DO UPDATE SET full_name=EXCLUDED.full_name, phone=EXCLUDED.phone, updated_at=NOW()`,
+        [user.id, user.name, user.phoneNumber ?? null],
+      );
+      return json({ user });
+    } catch {
+      return json({ user: null });
+    }
   }
 
   // ─── Workers ─────────────────────────────────────────────────────────────────
   if (path === "/api/workers" && method === "GET") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const r = await query(
         `SELECT * FROM workers WHERE owner_id = $1 ORDER BY created_at DESC`,
         [user.id],
@@ -58,7 +93,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   if (path === "/api/workers" && method === "POST") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const b = await parseBody(req);
       const r = await query(
         `INSERT INTO workers (owner_id, full_name, email, phone, role, department, hourly_rate, monthly_salary, avatar_url, status, joined_at)
@@ -75,7 +110,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   if (path.startsWith("/api/workers/") && method === "PUT") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const id = path.split("/")[3];
       const b = await parseBody(req);
       await query(
@@ -94,7 +129,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   if (path.startsWith("/api/workers/") && method === "DELETE") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const id = path.split("/")[3];
       await query(`DELETE FROM workers WHERE id=$1 AND owner_id=$2`, [id, user.id]);
       return json({ ok: true });
@@ -106,7 +141,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
   // ─── Projects ─────────────────────────────────────────────────────────────────
   if (path === "/api/projects" && method === "GET") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const r = await query(`SELECT * FROM projects WHERE owner_id = $1 ORDER BY created_at DESC`, [user.id]);
       return json(r.rows);
     } catch (e: unknown) {
@@ -116,7 +151,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   if (path === "/api/projects" && method === "POST") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const b = await parseBody(req);
       const r = await query(
         `INSERT INTO projects (owner_id, name, client, description, status, budget, spent, progress, start_date, end_date)
@@ -132,7 +167,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   if (path.startsWith("/api/projects/") && method === "PUT") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const id = path.split("/")[3];
       const b = await parseBody(req);
       await query(
@@ -149,7 +184,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   if (path.startsWith("/api/projects/") && method === "DELETE") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const id = path.split("/")[3];
       await query(`DELETE FROM projects WHERE id=$1 AND owner_id=$2`, [id, user.id]);
       return json({ ok: true });
@@ -161,7 +196,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
   // ─── Attendance ───────────────────────────────────────────────────────────────
   if (path.startsWith("/api/attendance") && method === "GET") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const url = new URL(req.url);
       const limit = parseInt(url.searchParams.get("limit") ?? "200");
       const r = await query(
@@ -178,7 +213,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   if (path === "/api/attendance" && method === "POST") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const b = await parseBody(req);
       const r = await query(
         `INSERT INTO attendance_records (owner_id, worker_id, check_in, check_out, hours, status, notes)
@@ -194,7 +229,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   if (path.startsWith("/api/attendance/") && method === "PUT") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const id = path.split("/")[3];
       const b = await parseBody(req);
       await query(
@@ -209,7 +244,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   if (path === "/api/attendance/qr" && method === "POST") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const { qr } = await parseBody(req);
       const wRes = await query(`SELECT id, full_name FROM workers WHERE qr_code=$1 AND owner_id=$2`, [qr, user.id]);
       if (!wRes.rows[0]) return err("QR not recognised", 404);
@@ -240,7 +275,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   if (path === "/api/attendance/hours" && method === "GET") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const url = new URL(req.url);
       const workerId = url.searchParams.get("worker_id");
       const start = url.searchParams.get("start");
@@ -259,7 +294,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
   // ─── Payroll ──────────────────────────────────────────────────────────────────
   if (path === "/api/payroll" && method === "GET") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const r = await query(
         `SELECT pr.*, row_to_json(w) as workers FROM payroll_records pr
          LEFT JOIN workers w ON w.id = pr.worker_id
@@ -274,7 +309,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   if (path === "/api/payroll" && method === "POST") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const b = await parseBody(req);
       const r = await query(
         `INSERT INTO payroll_records (owner_id, worker_id, period_start, period_end, base_amount, bonus, deductions, net_amount, hours_worked, status)
@@ -291,7 +326,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   if (path.startsWith("/api/payroll/") && method === "PUT") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const id = path.split("/")[3];
       await query(
         `UPDATE payroll_records SET status='Paid', paid_at=now(), updated_at=now() WHERE id=$1 AND owner_id=$2`,
@@ -305,7 +340,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   if (path.startsWith("/api/payroll/") && method === "DELETE") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const id = path.split("/")[3];
       await query(`DELETE FROM payroll_records WHERE id=$1 AND owner_id=$2`, [id, user.id]);
       return json({ ok: true });
@@ -317,7 +352,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
   // ─── Notifications ─────────────────────────────────────────────────────────
   if (path === "/api/notifications" && method === "GET") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const r = await query(
         `SELECT * FROM notifications WHERE user_id=$1 ORDER BY created_at DESC LIMIT 50`,
         [user.id],
@@ -330,7 +365,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   if (path.startsWith("/api/notifications/") && method === "PUT") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const id = path.split("/")[3];
       if (id === "read-all") {
         await query(
@@ -351,7 +386,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   if (path === "/api/notifications" && method === "POST") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const b = await parseBody(req);
       await query(
         `INSERT INTO notifications (user_id, title, message, type, link) VALUES ($1,$2,$3,$4,$5)`,
@@ -366,7 +401,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
   // ─── Leave ────────────────────────────────────────────────────────────────────
   if (path === "/api/leave" && method === "GET") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const r = await query(
         `SELECT lr.*, row_to_json(w) as workers FROM leave_requests lr
          LEFT JOIN workers w ON w.id = lr.worker_id
@@ -381,7 +416,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   if (path === "/api/leave" && method === "POST") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const b = await parseBody(req);
       if (b.id) {
         await query(
@@ -404,7 +439,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   if (path.startsWith("/api/leave/") && path.endsWith("/review") && method === "PUT") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const id = path.split("/")[3];
       const b = await parseBody(req);
       await query(
@@ -419,7 +454,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   if (path.startsWith("/api/leave/") && method === "DELETE") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const id = path.split("/")[3];
       await query(`DELETE FROM leave_requests WHERE id=$1 AND owner_id=$2`, [id, user.id]);
       return json({ ok: true });
@@ -431,7 +466,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
   // ─── Shifts ───────────────────────────────────────────────────────────────────
   if (path === "/api/shifts" && method === "GET") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const url = new URL(req.url);
       const from = url.searchParams.get("from");
       const to = url.searchParams.get("to");
@@ -451,7 +486,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   if (path === "/api/shifts" && method === "POST") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const b = await parseBody(req);
       if (b.id) {
         await query(
@@ -474,7 +509,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   if (path.startsWith("/api/shifts/") && method === "DELETE") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const id = path.split("/")[3];
       await query(`DELETE FROM shifts WHERE id=$1 AND owner_id=$2`, [id, user.id]);
       return json({ ok: true });
@@ -486,7 +521,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
   // ─── Tasks ────────────────────────────────────────────────────────────────────
   if (path === "/api/tasks" && method === "GET") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const r = await query(
         `SELECT t.*, row_to_json(w) as workers, row_to_json(p) as projects
          FROM tasks t
@@ -503,7 +538,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   if (path === "/api/tasks" && method === "POST") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const b = await parseBody(req);
       await query(
         `INSERT INTO tasks (owner_id, project_id, worker_id, title, description, status, priority, due_date)
@@ -519,7 +554,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   if (path.startsWith("/api/tasks/") && method === "PUT") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const id = path.split("/")[3];
       const b = await parseBody(req);
       const fields: string[] = [];
@@ -544,7 +579,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   if (path.startsWith("/api/tasks/") && method === "DELETE") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const id = path.split("/")[3];
       await query(`DELETE FROM tasks WHERE id=$1 AND owner_id=$2`, [id, user.id]);
       return json({ ok: true });
@@ -556,7 +591,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
   // ─── Clients ──────────────────────────────────────────────────────────────────
   if (path === "/api/clients" && method === "GET") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const r = await query(`SELECT * FROM clients WHERE owner_id=$1 ORDER BY created_at DESC`, [user.id]);
       return json(r.rows);
     } catch (e: unknown) {
@@ -566,7 +601,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   if (path === "/api/clients" && method === "POST") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const b = await parseBody(req);
       if (b.id) {
         await query(
@@ -588,7 +623,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   if (path.startsWith("/api/clients/") && method === "DELETE") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const id = path.split("/")[3];
       await query(`DELETE FROM clients WHERE id=$1 AND owner_id=$2`, [id, user.id]);
       return json({ ok: true });
@@ -600,7 +635,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
   // ─── Invoices ─────────────────────────────────────────────────────────────────
   if (path === "/api/invoices" && method === "GET") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const r = await query(
         `SELECT i.*, row_to_json(c) as clients FROM invoices i
          LEFT JOIN clients c ON c.id = i.client_id
@@ -615,7 +650,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   if (path.startsWith("/api/invoices/") && path.endsWith("/items") && method === "GET") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const id = path.split("/")[3];
       const iRes = await query(`SELECT i.*, row_to_json(c) as clients FROM invoices i LEFT JOIN clients c ON c.id = i.client_id WHERE i.id=$1 AND i.owner_id=$2`, [id, user.id]);
       if (!iRes.rows[0]) return err("Not found", 404);
@@ -628,7 +663,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   if (path === "/api/invoices" && method === "POST") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const b = await parseBody(req);
       const subtotal = (b.items ?? []).reduce((s: number, i: { quantity: number; unit_price: number }) => s + i.quantity * i.unit_price, 0);
       const tax_amount = +(subtotal * ((b.tax_rate ?? 0) / 100)).toFixed(2);
@@ -657,7 +692,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   if (path.startsWith("/api/invoices/") && path.endsWith("/status") && method === "PUT") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const id = path.split("/")[3];
       const b = await parseBody(req);
       const paidAt = b.status === "Paid" ? new Date().toISOString() : null;
@@ -673,7 +708,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   if (path.startsWith("/api/invoices/") && method === "DELETE") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const id = path.split("/")[3];
       await query(`DELETE FROM invoices WHERE id=$1 AND owner_id=$2`, [id, user.id]);
       return json({ ok: true });
@@ -684,7 +719,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   if (path === "/api/invoices/next-number" && method === "GET") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const r = await query(
         `SELECT invoice_number FROM invoices WHERE owner_id=$1 ORDER BY created_at DESC LIMIT 1`,
         [user.id],
@@ -701,7 +736,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
   // ─── Announcements ────────────────────────────────────────────────────────────
   if (path === "/api/announcements" && method === "GET") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const r = await query(
         `SELECT * FROM announcements WHERE owner_id=$1 ORDER BY pinned DESC, created_at DESC LIMIT 100`,
         [user.id],
@@ -714,7 +749,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   if (path === "/api/announcements" && method === "POST") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const b = await parseBody(req);
       await query(
         `INSERT INTO announcements (owner_id, title, content, category, pinned) VALUES ($1,$2,$3,$4,$5)`,
@@ -728,7 +763,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   if (path.startsWith("/api/announcements/") && path.endsWith("/pin") && method === "PUT") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const id = path.split("/")[3];
       const b = await parseBody(req);
       await query(
@@ -743,7 +778,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   if (path.startsWith("/api/announcements/") && method === "DELETE") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const id = path.split("/")[3];
       await query(`DELETE FROM announcements WHERE id=$1 AND owner_id=$2`, [id, user.id]);
       return json({ ok: true });
@@ -755,7 +790,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
   // ─── Attendance Corrections ───────────────────────────────────────────────────
   if (path === "/api/corrections" && method === "GET") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const r = await query(
         `SELECT ac.*, row_to_json(w) as workers FROM attendance_corrections ac
          LEFT JOIN workers w ON w.id = ac.worker_id
@@ -770,7 +805,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   if (path === "/api/corrections" && method === "POST") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const b = await parseBody(req);
       await query(
         `INSERT INTO attendance_corrections (owner_id, attendance_id, worker_id, requested_check_in, requested_check_out, reason)
@@ -785,7 +820,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   if (path.startsWith("/api/corrections/") && method === "PUT") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const id = path.split("/")[3];
       const b = await parseBody(req);
       await query(
@@ -801,7 +836,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
   // ─── Company Settings ─────────────────────────────────────────────────────────
   if (path === "/api/company" && method === "GET") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const r = await query(`SELECT * FROM company_settings WHERE owner_id=$1`, [user.id]);
       return json(r.rows[0] ?? null);
     } catch (e: unknown) {
@@ -811,7 +846,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   if (path === "/api/company" && method === "POST") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const b = await parseBody(req);
       await query(
         `INSERT INTO company_settings (owner_id, company_name, address, email, phone, currency, theme, logo_url)
@@ -831,7 +866,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
   // ─── Profile ──────────────────────────────────────────────────────────────────
   if (path === "/api/profile" && method === "GET") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const r = await query(`SELECT * FROM profiles WHERE id=$1`, [user.id]);
       if (r.rows[0]) return json(r.rows[0]);
       // Auto-create on first access
@@ -848,7 +883,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   if (path === "/api/profile" && method === "PUT") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const b = await parseBody(req);
       await query(
         `INSERT INTO profiles (id, full_name, phone, avatar_url, role)
@@ -870,7 +905,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
   // ─── Activity Logs ─────────────────────────────────────────────────────────────
   if (path === "/api/activity" && method === "GET") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const url = new URL(req.url);
       const limit = parseInt(url.searchParams.get("limit") ?? "50");
       const r = await query(
@@ -885,7 +920,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   if (path === "/api/activity" && method === "POST") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const b = await parseBody(req);
       await query(
         `INSERT INTO activity_logs (user_id, action, category, details) VALUES ($1,$2,$3,$4)`,
@@ -900,7 +935,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
   // ─── User Role ────────────────────────────────────────────────────────────────
   if (path === "/api/role" && method === "GET") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const r = await query(
         `SELECT role FROM user_roles WHERE user_id=$1 ORDER BY created_at ASC`,
         [user.id],
@@ -917,7 +952,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
   // ─── Project Assignments ──────────────────────────────────────────────────────
   if (path === "/api/project-assignments" && method === "GET") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const url = new URL(req.url);
       const projectId = url.searchParams.get("project_id");
       const r = await query(
@@ -934,7 +969,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   if (path === "/api/project-assignments" && method === "POST") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const b = await parseBody(req);
       await query(
         `INSERT INTO project_assignments (owner_id, project_id, worker_id) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING`,
@@ -948,7 +983,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
 
   if (path.startsWith("/api/project-assignments/") && method === "DELETE") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const id = path.split("/")[3];
       await query(`DELETE FROM project_assignments WHERE id=$1 AND owner_id=$2`, [id, user.id]);
       return json({ ok: true });
@@ -960,7 +995,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
   // ─── Profiles by ID (for my.tsx) ─────────────────────────────────────────────
   if (path.startsWith("/api/profiles/") && method === "GET") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const profileId = path.split("/")[3];
       if (profileId !== user.id) return err("Forbidden", 403);
       const r = await query(`SELECT * FROM profiles WHERE id=$1`, [profileId]);
@@ -979,7 +1014,7 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
   // ─── Activity Logs (for activity.tsx — /api/activity_logs alias) ─────────────
   if (path === "/api/activity_logs" && method === "GET") {
     try {
-      const user = requireUser(req.headers);
+      const user = await requireUser(req.headers);
       const url2 = new URL(req.url);
       const limit = parseInt(url2.searchParams.get("limit") ?? "100");
       const category = url2.searchParams.get("category");

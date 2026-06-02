@@ -1,26 +1,51 @@
-// Firebase Phone Auth is not used in this Replit deployment.
-// Authentication is handled via Replit Auth.
-// This stub prevents import errors.
+import {
+  RecaptchaVerifier,
+  signInWithPhoneNumber,
+  type Auth,
+  type ConfirmationResult,
+} from "firebase/auth";
+import { getFirebaseAuth } from "./firebase";
 
-export function initRecaptcha(_containerId: string): never {
-  throw new Error("Firebase Phone Auth is not available. Use Replit Auth.");
+let _recaptcha: RecaptchaVerifier | null = null;
+
+export function clearRecaptcha(): void {
+  if (_recaptcha) {
+    try { _recaptcha.clear(); } catch { /* already cleared */ }
+    _recaptcha = null;
+  }
+}
+
+function buildVerifier(auth: Auth, containerId: string): RecaptchaVerifier {
+  clearRecaptcha();
+  _recaptcha = new RecaptchaVerifier(auth, containerId, {
+    size: "invisible",
+    callback: () => {},
+    "expired-callback": () => { clearRecaptcha(); },
+  });
+  return _recaptcha;
 }
 
 export async function sendPhoneOTP(
-  _phoneNumber: string,
-  _containerId: string,
-): Promise<never> {
-  throw new Error("Firebase Phone Auth is not available. Use Replit Auth.");
+  phoneNumber: string,
+  containerId: string,
+): Promise<ConfirmationResult> {
+  const auth = getFirebaseAuth();
+  if (!auth) throw new Error("Firebase is not configured.");
+  const verifier = buildVerifier(auth, containerId);
+  return signInWithPhoneNumber(auth, phoneNumber, verifier);
 }
 
-export async function verifyOTPAndLinkSupabase(
-  _confirmationResult: unknown,
-  _otp: string,
-  _phoneNumber: string,
-): Promise<void> {
-  throw new Error("Firebase Phone Auth is not available. Use Replit Auth.");
+export async function verifyPhoneOTP(
+  confirmationResult: ConfirmationResult,
+  otp: string,
+): Promise<string> {
+  const result = await confirmationResult.confirm(otp);
+  return result.user.getIdToken();
 }
 
 export async function signOutFirebase(): Promise<void> {
-  // no-op
+  const auth = getFirebaseAuth();
+  if (!auth) return;
+  const { signOut } = await import("firebase/auth");
+  await signOut(auth);
 }

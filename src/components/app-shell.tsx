@@ -12,6 +12,7 @@ import { BrandMark, Logo } from "@/components/brand";
 import { CommandPalette } from "@/components/command-palette";
 import { NotificationBell } from "@/components/notification-bell";
 import { useSession } from "@/hooks/use-session";
+import { signOutFirebase } from "@/lib/firebase-phone-auth";
 import { toast } from "sonner";
 import { logActivity } from "@/lib/activity-log";
 
@@ -72,9 +73,10 @@ export function AppShell({
   async function handleLogout() {
     try {
       await logActivity("signed_out", "auth");
+      await signOutFirebase();
       queryClient.clear();
       toast.success("Signed out");
-      navigate({ to: "/" });
+      navigate({ to: "/auth" });
     } catch {
       toast.error("Sign-out failed. Please try again.");
     }
