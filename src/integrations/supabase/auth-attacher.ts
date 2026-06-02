@@ -1,13 +1,7 @@
-import { createMiddleware } from '@tanstack/react-start'
-import { supabase } from './client'
+import { createMiddleware } from "@tanstack/react-start";
 
-// Attaches the Supabase Bearer token to outgoing server function RPCs.
-export const attachSupabaseAuth = createMiddleware({ type: 'function' }).client(
-  async ({ next }) => {
-    const { data } = await supabase.auth.getSession()
-    const token = data.session?.access_token
-    return next({
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-  },
-)
+// No-op: Replit Auth uses X-Replit-User-* headers automatically.
+// This stub prevents import errors.
+export const attachSupabaseAuth = createMiddleware({ type: "function" }).client(
+  async ({ next }) => next({}),
+);

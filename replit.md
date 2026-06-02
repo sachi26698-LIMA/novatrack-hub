@@ -1,14 +1,15 @@
 # TrackNova — Enterprise Workforce OS
 
-A full-featured enterprise workforce management platform built with TanStack Start + React + Supabase.
+A full-featured enterprise workforce management platform built with TanStack Start + React + Replit PostgreSQL.
 
 ## Tech Stack
 
 - **Frontend**: React 19, TanStack Router, TanStack Query, Tailwind CSS v4, Framer Motion
-- **Auth & Database**: Supabase (email/password, phone OTP)
-- **Server functions**: TanStack Start (server functions via `createServerFn`)
+- **Auth**: Replit Auth (X-Replit-User-* headers via `/__replauthuser`)
+- **Database**: Replit PostgreSQL (via `DATABASE_URL` env var, `pg` driver)
+- **Server routes**: Custom API handlers in `server/routes.ts`, mounted in `src/server.ts`
 - **AI**: OpenAI GPT-4o-mini for AI Insights (requires `OPENAI_API_KEY`)
-- **Build**: Vite 7 with `@lovable.dev/vite-tanstack-config`
+- **Build**: Vite 7 + TanStack Start plugin
 
 ## Running the App
 
@@ -20,14 +21,16 @@ The app runs on port 5000.
 
 ## Environment Variables
 
-Set in `.env` or Replit Secrets:
+Set in Replit Secrets (automatically provisioned):
 
 | Variable | Description |
 |---|---|
-| `VITE_SUPABASE_URL` | Supabase project URL (public) |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase anon key (public) |
-| `SUPABASE_URL` | Supabase project URL (server) |
-| `SUPABASE_PUBLISHABLE_KEY` | Supabase anon key (server) |
+| `DATABASE_URL` | Replit PostgreSQL connection string (auto-provisioned) |
+| `PGHOST` | PostgreSQL host (auto-provisioned) |
+| `PGPORT` | PostgreSQL port (auto-provisioned) |
+| `PGUSER` | PostgreSQL user (auto-provisioned) |
+| `PGPASSWORD` | PostgreSQL password (auto-provisioned) |
+| `PGDATABASE` | PostgreSQL database name (auto-provisioned) |
 | `OPENAI_API_KEY` | Optional — enables AI Insights feature |
 
 ## Features
@@ -48,5 +51,5 @@ Set in `.env` or Replit Secrets:
 ## User Preferences
 
 - Dark neon theme by default
-- Keep Supabase for auth and database — all data lives in Supabase
-- Google OAuth removed (not available on Replit); use email/password or phone OTP
+- Auth via Replit Auth — users click "Sign in with Replit" on `/auth`
+- All data stored in Replit PostgreSQL, accessed server-side only
