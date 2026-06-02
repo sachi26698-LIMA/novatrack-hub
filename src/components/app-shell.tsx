@@ -13,6 +13,7 @@ import { CommandPalette } from "@/components/command-palette";
 import { NotificationBell } from "@/components/notification-bell";
 import { useSession } from "@/hooks/use-session";
 import { supabase } from "@/integrations/supabase/client";
+import { signOutFirebase } from "@/lib/firebase-phone-auth";
 import { toast } from "sonner";
 import { logActivity } from "@/lib/activity-log";
 
@@ -75,8 +76,10 @@ export function AppShell({
   async function handleLogout() {
     try {
       await logActivity("signed_out", "auth");
-      await supabase.auth.signOut();
-      // FIX: clear ALL cached queries on sign-out to prevent stale data leaking to next session
+      await Promise.allSettled([
+        supabase.auth.signOut(),
+        signOutFirebase(),
+      ]);
       queryClient.clear();
       toast.success("Signed out");
       navigate({ to: "/" });

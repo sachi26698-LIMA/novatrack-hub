@@ -8,3 +8,5 @@
 - [AuthSync optimization](authsync-optimization.md) — __root.tsx AuthSync must only invalidate on SIGNED_IN/SIGNED_OUT/USER_UPDATED, never TOKEN_REFRESHED; avoids excessive re-fetches
 - [Phase 2 features](phase2-features.md) — kanban board, calendar views, announcements, /my workspace, dashboard heatmap+leaderboard+tasks widget all shipped.
 - [New table pattern](new-table-pattern.md) — tables not in generated Supabase types use (supabase as any).from(...); catch code 42P01 and return [] for graceful degradation.
+- [Firebase phone auth](firebase-phone-auth.md) — Firebase handles phone OTP; after verify it silently creates a Supabase email+password session so all RLS/useSession stay unchanged.
+- [Firebase lazy init](firebase-lazy-init.md) — getFirebaseAuth() must be a lazy getter (never module-level); getAuth() throws auth/invalid-api-key during SSR if env vars are missing.
