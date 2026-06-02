@@ -1,12 +1,7 @@
 - [New tables needed](new-tables.md) — tasks + attendance_corrections require SQL migration before features work
-- [Tasks feature](tasks-feature.md) — full tasks module at /tasks with graceful 42P01 error handling; uses queries-tasks.ts for all CRUD
-- [Supabase phone OTP](supabase-phone-otp.md) — real signInWithOtp/verifyOtp used; falls back gracefully if phone auth not configured in project
 - [Bulk payroll](bulk-payroll.md) — BulkPayrollModal uses createPayroll directly (not mutation callback) to enable sequential async; useQueryClient to invalidate after all records created
-- [Role persistence](role-persistence.md) — use-role.tsx reads user_roles table, falls back to user_metadata.role, auto-upserts into user_roles on first login
+- [Role persistence](role-persistence.md) — migrated to Replit Auth; user_roles table still used but owner_id/user_id cols are text (Replit user IDs are strings, not UUIDs)
 - [Auth onConflict fix](auth-onconflict.md) — user_roles unique constraint is (user_id, role) not just user_id; always use onConflict: "user_id,role"
-- [Auth reset redirect](auth-reset-redirect.md) — forgot password must redirect to /reset-password not /dashboard; /forgot-password is the dedicated standalone page
-- [AuthSync optimization](authsync-optimization.md) — __root.tsx AuthSync must only invalidate on SIGNED_IN/SIGNED_OUT/USER_UPDATED, never TOKEN_REFRESHED; avoids excessive re-fetches
+- [Replit Auth migration](replit-auth-migration.md) — Firebase/Supabase replaced with Replit Auth; user id comes from x-replit-user-id header; firebase.ts and firebase-phone-auth.ts are no-op stubs
+- [Tailwind v4 Vite setup](tailwind-v4-vite.md) — Tailwind CSS v4 requires @tailwindcss/vite plugin in vite.config.ts; no tailwind.config.js or postcss.config.js needed; CSS at src/styles.css uses @import "tailwindcss" source(none)
 - [Phase 2 features](phase2-features.md) — kanban board, calendar views, announcements, /my workspace, dashboard heatmap+leaderboard+tasks widget all shipped.
-- [New table pattern](new-table-pattern.md) — tables not in generated Supabase types use (supabase as any).from(...); catch code 42P01 and return [] for graceful degradation.
-- [Firebase phone auth](firebase-phone-auth.md) — Firebase handles phone OTP; after verify it silently creates a Supabase email+password session so all RLS/useSession stay unchanged.
-- [Firebase lazy init](firebase-lazy-init.md) — getFirebaseAuth() must be a lazy getter (never module-level); getAuth() throws auth/invalid-api-key during SSR if env vars are missing.

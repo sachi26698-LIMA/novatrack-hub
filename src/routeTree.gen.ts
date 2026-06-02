@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WorkersRouteImport } from './routes/workers'
 import { Route as TasksRouteImport } from './routes/tasks'
+import { Route as SystemHealthRouteImport } from './routes/system-health'
 import { Route as ShiftsRouteImport } from './routes/shifts'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
@@ -38,6 +39,11 @@ const WorkersRoute = WorkersRouteImport.update({
 const TasksRoute = TasksRouteImport.update({
   id: '/tasks',
   path: '/tasks',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SystemHealthRoute = SystemHealthRouteImport.update({
+  id: '/system-health',
+  path: '/system-health',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ShiftsRoute = ShiftsRouteImport.update({
@@ -150,6 +156,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
   '/shifts': typeof ShiftsRoute
+  '/system-health': typeof SystemHealthRoute
   '/tasks': typeof TasksRoute
   '/workers': typeof WorkersRoute
 }
@@ -172,6 +179,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
   '/shifts': typeof ShiftsRoute
+  '/system-health': typeof SystemHealthRoute
   '/tasks': typeof TasksRoute
   '/workers': typeof WorkersRoute
 }
@@ -195,6 +203,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
   '/shifts': typeof ShiftsRoute
+  '/system-health': typeof SystemHealthRoute
   '/tasks': typeof TasksRoute
   '/workers': typeof WorkersRoute
 }
@@ -219,6 +228,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/settings'
     | '/shifts'
+    | '/system-health'
     | '/tasks'
     | '/workers'
   fileRoutesByTo: FileRoutesByTo
@@ -241,6 +251,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/settings'
     | '/shifts'
+    | '/system-health'
     | '/tasks'
     | '/workers'
   id:
@@ -263,6 +274,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/settings'
     | '/shifts'
+    | '/system-health'
     | '/tasks'
     | '/workers'
   fileRoutesById: FileRoutesById
@@ -286,6 +298,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SettingsRoute: typeof SettingsRoute
   ShiftsRoute: typeof ShiftsRoute
+  SystemHealthRoute: typeof SystemHealthRoute
   TasksRoute: typeof TasksRoute
   WorkersRoute: typeof WorkersRoute
 }
@@ -304,6 +317,13 @@ declare module '@tanstack/react-router' {
       path: '/tasks'
       fullPath: '/tasks'
       preLoaderRoute: typeof TasksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/system-health': {
+      id: '/system-health'
+      path: '/system-health'
+      fullPath: '/system-health'
+      preLoaderRoute: typeof SystemHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/shifts': {
@@ -454,6 +474,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SettingsRoute: SettingsRoute,
   ShiftsRoute: ShiftsRoute,
+  SystemHealthRoute: SystemHealthRoute,
   TasksRoute: TasksRoute,
   WorkersRoute: WorkersRoute,
 }

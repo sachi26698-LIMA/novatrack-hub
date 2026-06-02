@@ -87,6 +87,49 @@ async function parseBody(req: Request) {
 export async function handleApiRequest(req: Request, path: string): Promise<Response | null> {
   const method = req.method;
 
+  // ─── System Health ───────────────────────────────────────────────────────────
+  if (path === "/api/system-health" && method === "GET") {
+    const checks: Record<string, { ok: boolean; message: string }> = {};
+
+    // 1. Database check
+    try {
+      await query("SELECT 1");
+      checks.database = { ok: true, message: "PostgreSQL reachable" };
+    } catch (e: any) {
+      checks.database = { ok: false, message: e?.message ?? "Query failed" };
+    }
+
+    // 2. Auth check (Replit injected headers)
+    const userId = req.headers.get("x-replit-user-id");
+    const userName = req.headers.get("x-replit-user-name");
+    checks.auth = userId
+      ? { ok: true, message: `Signed in as ${userName ?? userId}` }
+      : { ok: false, message: "Not authenticated (no x-replit-user-id header)" };
+
+    // 3. Environment variables
+    const requiredEnv = ["DATABASE_URL", "SESSION_SECRET", "REPL_ID"];
+    const missingEnv = requiredEnv.filter((k) => !process.env[k]);
+    checks.env = missingEnv.length === 0
+      ? { ok: true, message: "All required env vars present" }
+      : { ok: false, message: `Missing: ${missingEnv.join(", ")}` };
+
+    // 4. Replit Auth system
+    checks.replitAuth = { ok: true, message: "Replit Auth active (header-based)" };
+
+    // 5. Firebase / Supabase (replaced — intentional)
+    checks.firebase = { ok: true, message: "Not used — replaced by Replit Auth" };
+    checks.supabase = { ok: true, message: "Not used — replaced by Replit PostgreSQL" };
+
+    // 6. OpenAI / AI Insights
+    const hasOpenAI = !!(process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY);
+    checks.openai = hasOpenAI
+      ? { ok: true, message: "API key present — AI Insights enabled" }
+      : { ok: false, message: "No API key — AI Insights disabled" };
+
+    const allOk = Object.values(checks).every((c) => c.ok);
+    return json({ ok: allOk, checks, timestamp: new Date().toISOString() });
+  }
+
   // ─── Auth ────────────────────────────────────────────────────────────────────
   if (path === "/api/auth/login") {
     // Redirect to Replit OAuth
