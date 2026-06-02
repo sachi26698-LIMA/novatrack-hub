@@ -1,7 +1,6 @@
+- [Supabase+Firebase auth](supabase-firebase-auth.md) — full auth system: Google OAuth + Email/Password (Supabase) + Phone OTP (Firebase); browser-only Supabase client to avoid Node.js 20 WebSocket SSR crash
 - [New tables needed](new-tables.md) — tasks + attendance_corrections require SQL migration before features work
 - [Bulk payroll](bulk-payroll.md) — BulkPayrollModal uses createPayroll directly (not mutation callback) to enable sequential async; useQueryClient to invalidate after all records created
-- [Role persistence](role-persistence.md) — migrated to Replit Auth; user_roles table still used but owner_id/user_id cols are text (Replit user IDs are strings, not UUIDs)
 - [Auth onConflict fix](auth-onconflict.md) — user_roles unique constraint is (user_id, role) not just user_id; always use onConflict: "user_id,role"
-- [Replit Auth migration](replit-auth-migration.md) — Firebase/Supabase replaced with Replit Auth; user id comes from x-replit-user-id header; firebase.ts and firebase-phone-auth.ts are no-op stubs
 - [Tailwind v4 Vite setup](tailwind-v4-vite.md) — Tailwind CSS v4 requires @tailwindcss/vite plugin in vite.config.ts; no tailwind.config.js or postcss.config.js needed; CSS at src/styles.css uses @import "tailwindcss" source(none)
 - [Phase 2 features](phase2-features.md) — kanban board, calendar views, announcements, /my workspace, dashboard heatmap+leaderboard+tasks widget all shipped.

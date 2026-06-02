@@ -1,57 +1,89 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { motion } from "framer-motion";
-import { ArrowLeft, Sparkles } from "lucide-react";
-import { AnimatedBackground } from "@/components/animated-background";
-import { BrandMark } from "@/components/brand";
+import { createFileRoute } from "@tanstack/react-router";
+import { AnimatePresence, motion } from "framer-motion";
+import { useState } from "react";
+import { CheckCircle2, KeyRound, Mail, Send } from "lucide-react";
+import { AuthShell, AuthInput, AuthError, PrimaryBtn } from "@/components/auth-shell";
+import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/forgot-password")({
   head: () => ({
     meta: [
-      { title: "Sign in — TrackNova" },
-      { name: "description", content: "Sign in to TrackNova." },
+      { title: "Reset password — TrackNova" },
+      { name: "description", content: "Reset your TrackNova password." },
     ],
   }),
   component: ForgotPasswordPage,
 });
 
 function ForgotPasswordPage() {
+  const [email, setEmail]   = useState("");
+  const [busy, setBusy]     = useState(false);
+  const [error, setError]   = useState("");
+  const [sent, setSent]     = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!email.trim()) { setError("Enter your email address."); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setError("Enter a valid email."); return; }
+    if (!isSupabaseConfigured) { setError("Supabase not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY."); return; }
+    setBusy(true); setError("");
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (error) { setError(error.message); setBusy(false); return; }
+    setSent(true); setBusy(false);
+  }
+
   return (
-    <div className="min-h-screen relative">
-      <AnimatedBackground />
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-5 flex items-center justify-between">
-        <BrandMark />
-        <Link
-          to="/auth"
-          className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 transition"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" /> Back to sign in
-        </Link>
+    <AuthShell badge="Password reset" backLink={{ to: "/auth", label: "Back to sign in" }}>
+      <div className="text-center mb-6">
+        <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl mb-4 mx-auto"
+          style={{ background: "linear-gradient(135deg,var(--neon-cyan)18,var(--neon-violet)18)" }}>
+          <KeyRound className="h-7 w-7 text-[color:var(--neon-cyan)]" />
+        </div>
+        <h1 className="text-2xl font-bold tracking-tight">
+          {sent ? "Check your inbox" : <>Reset <span className="neon-text">password</span></>}
+        </h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          {sent
+            ? `A reset link was sent to ${email}`
+            : "We'll send a secure reset link to your email."}
+        </p>
       </div>
 
-      <div className="mx-auto max-w-md px-4 sm:px-6 pt-6 pb-16">
-        <motion.div
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45 }}
-          className="glass-strong neon-border rounded-3xl p-6 sm:p-8 glow-violet text-center"
-        >
-          <div className="inline-flex items-center gap-2 rounded-full glass px-3 py-1 text-xs text-muted-foreground mb-5">
-            <Sparkles className="h-3 w-3 text-[color:var(--neon-cyan)]" />
-            Authentication
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight mb-3">Use Replit to sign in</h1>
-          <p className="text-sm text-muted-foreground mb-6">
-            TrackNova uses Replit authentication. Password reset is managed through your Replit account.
-          </p>
-          <Link
-            to="/auth"
-            className="inline-flex items-center justify-center gap-2 rounded-xl py-3 px-6 text-sm font-semibold text-primary-foreground w-full glow-cyan transition"
-            style={{ background: "linear-gradient(135deg, var(--neon-cyan), var(--neon-violet))" }}
-          >
-            Back to sign in
-          </Link>
-        </motion.div>
-      </div>
-    </div>
+      <AnimatePresence mode="wait">
+        {!sent ? (
+          <motion.div key="form"
+            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.25 }}>
+            <AuthError msg={error} />
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <AuthInput icon={Mail} type="email" value={email} onChange={setEmail}
+                placeholder="your@email.com" autoComplete="email" disabled={busy} />
+              <PrimaryBtn type="submit" loading={busy}>
+                <Send className="h-4 w-4" /> Send reset link
+              </PrimaryBtn>
+            </form>
+          </motion.div>
+        ) : (
+          <motion.div key="success"
+            initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }} className="text-center space-y-4">
+            <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl mx-auto"
+              style={{ background:"rgba(20,184,166,0.12)", border:"1px solid rgba(20,184,166,0.3)" }}>
+              <CheckCircle2 className="h-8 w-8" style={{ color:"#2dd4bf" }} />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Click the link in your email to set a new password. The link expires in <strong className="text-foreground">1 hour</strong>.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Didn't get it? Check spam, or{" "}
+              <button type="button" onClick={() => setSent(false)}
+                className="text-[color:var(--neon-cyan)] hover:underline">try again</button>.
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </AuthShell>
   );
 }

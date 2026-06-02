@@ -5,6 +5,7 @@ interface AuthUser {
   name: string;
   profileImage: string | null;
   phoneNumber?: string | null;
+  email?: string | null;
 }
 
 function parseCookies(cookieHeader: string | null): Record<string, string> {
@@ -46,6 +47,7 @@ async function requireUser(headers: Headers): Promise<AuthUser> {
               name: String(meta.full_name ?? meta.name ?? data.email ?? data.phone ?? data.id),
               profileImage: String(meta.avatar_url ?? meta.picture ?? ""),
               phoneNumber: data.phone ?? null,
+              email: data.email ?? null,
             };
           }
         }
@@ -162,12 +164,15 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
   if (path === "/api/auth/session") {
     try {
       const user = await requireUser(req.headers);
-      // Upsert profile so the profiles table stays in sync with Replit user
+      // Upsert profile — keeps profiles table in sync with auth provider
       await query(
-        `INSERT INTO profiles (id, full_name, role, updated_at)
-         VALUES ($1,$2,'Worker',NOW())
-         ON CONFLICT (id) DO UPDATE SET full_name=EXCLUDED.full_name, updated_at=NOW()`,
-        [user.id, user.name],
+        `INSERT INTO profiles (id, full_name, email, role, updated_at)
+         VALUES ($1,$2,$3,'Worker',NOW())
+         ON CONFLICT (id) DO UPDATE
+           SET full_name = COALESCE(EXCLUDED.full_name, profiles.full_name),
+               email     = COALESCE(EXCLUDED.email, profiles.email),
+               updated_at = NOW()`,
+        [user.id, user.name, user.email ?? null],
       );
       return json({ user });
     } catch {
