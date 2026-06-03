@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
-import { AlertCircle, ArrowLeft, Sparkles } from "lucide-react";
+import { AlertCircle, AlertTriangle, ArrowLeft, CheckCircle2, Info, Sparkles } from "lucide-react";
 import { AnimatedBackground } from "@/components/animated-background";
 import { BrandMark } from "@/components/brand";
 
@@ -107,7 +107,7 @@ export function AuthInput({
   );
 }
 
-// ── Error banner ───────────────────────────────────────────────────────────────
+// ── Error banner (red) ────────────────────────────────────────────────────────
 export function AuthError({ msg }: { msg: string }) {
   return (
     <AnimatePresence>
@@ -126,6 +126,84 @@ export function AuthError({ msg }: { msg: string }) {
           }}
         >
           <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-px" />
+          <span>{msg}</span>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+// ── Warning banner (amber) ─────────────────────────────────────────────────────
+export function AuthWarning({ msg }: { msg: string }) {
+  return (
+    <AnimatePresence>
+      {msg && (
+        <motion.div
+          key="warn"
+          initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+          animate={{ opacity: 1, height: "auto", marginBottom: 12 }}
+          exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+          transition={{ duration: 0.2 }}
+          className="flex items-start gap-2 rounded-xl px-3 py-2.5 text-xs overflow-hidden"
+          style={{
+            background: "rgba(251,191,36,0.08)",
+            border: "1px solid rgba(251,191,36,0.28)",
+            color: "#fbbf24",
+          }}
+        >
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-px" />
+          <span>{msg}</span>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+// ── Info banner (blue) ─────────────────────────────────────────────────────────
+export function AuthInfo({ msg }: { msg: string }) {
+  return (
+    <AnimatePresence>
+      {msg && (
+        <motion.div
+          key="info"
+          initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+          animate={{ opacity: 1, height: "auto", marginBottom: 12 }}
+          exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+          transition={{ duration: 0.2 }}
+          className="flex items-start gap-2 rounded-xl px-3 py-2.5 text-xs overflow-hidden"
+          style={{
+            background: "rgba(0,229,255,0.07)",
+            border: "1px solid rgba(0,229,255,0.22)",
+            color: "#67e8f9",
+          }}
+        >
+          <Info className="h-3.5 w-3.5 shrink-0 mt-px" />
+          <span>{msg}</span>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+// ── Success banner (green) ────────────────────────────────────────────────────
+export function AuthSuccess({ msg }: { msg: string }) {
+  return (
+    <AnimatePresence>
+      {msg && (
+        <motion.div
+          key="success"
+          initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+          animate={{ opacity: 1, height: "auto", marginBottom: 12 }}
+          exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+          transition={{ duration: 0.2 }}
+          className="flex items-start gap-2 rounded-xl px-3 py-2.5 text-xs overflow-hidden"
+          style={{
+            background: "rgba(34,197,94,0.1)",
+            border: "1px solid rgba(34,197,94,0.28)",
+            color: "#4ade80",
+          }}
+        >
+          <CheckCircle2 className="h-3.5 w-3.5 shrink-0 mt-px" />
           <span>{msg}</span>
         </motion.div>
       )}
