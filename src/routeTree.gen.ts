@@ -18,6 +18,7 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as ProjectsRouteImport } from './routes/projects'
+import { Route as PendingApprovalRouteImport } from './routes/pending-approval'
 import { Route as PayrollRouteImport } from './routes/payroll'
 import { Route as MyRouteImport } from './routes/my'
 import { Route as LeaveRouteImport } from './routes/leave'
@@ -75,6 +76,11 @@ const ReportsRoute = ReportsRouteImport.update({
 const ProjectsRoute = ProjectsRouteImport.update({
   id: '/projects',
   path: '/projects',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PendingApprovalRoute = PendingApprovalRouteImport.update({
+  id: '/pending-approval',
+  path: '/pending-approval',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PayrollRoute = PayrollRouteImport.update({
@@ -157,6 +163,7 @@ export interface FileRoutesByFullPath {
   '/leave': typeof LeaveRoute
   '/my': typeof MyRoute
   '/payroll': typeof PayrollRoute
+  '/pending-approval': typeof PendingApprovalRoute
   '/projects': typeof ProjectsRoute
   '/reports': typeof ReportsRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -181,6 +188,7 @@ export interface FileRoutesByTo {
   '/leave': typeof LeaveRoute
   '/my': typeof MyRoute
   '/payroll': typeof PayrollRoute
+  '/pending-approval': typeof PendingApprovalRoute
   '/projects': typeof ProjectsRoute
   '/reports': typeof ReportsRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -206,6 +214,7 @@ export interface FileRoutesById {
   '/leave': typeof LeaveRoute
   '/my': typeof MyRoute
   '/payroll': typeof PayrollRoute
+  '/pending-approval': typeof PendingApprovalRoute
   '/projects': typeof ProjectsRoute
   '/reports': typeof ReportsRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -232,6 +241,7 @@ export interface FileRouteTypes {
     | '/leave'
     | '/my'
     | '/payroll'
+    | '/pending-approval'
     | '/projects'
     | '/reports'
     | '/reset-password'
@@ -256,6 +266,7 @@ export interface FileRouteTypes {
     | '/leave'
     | '/my'
     | '/payroll'
+    | '/pending-approval'
     | '/projects'
     | '/reports'
     | '/reset-password'
@@ -280,6 +291,7 @@ export interface FileRouteTypes {
     | '/leave'
     | '/my'
     | '/payroll'
+    | '/pending-approval'
     | '/projects'
     | '/reports'
     | '/reset-password'
@@ -305,6 +317,7 @@ export interface RootRouteChildren {
   LeaveRoute: typeof LeaveRoute
   MyRoute: typeof MyRoute
   PayrollRoute: typeof PayrollRoute
+  PendingApprovalRoute: typeof PendingApprovalRoute
   ProjectsRoute: typeof ProjectsRoute
   ReportsRoute: typeof ReportsRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
@@ -379,6 +392,13 @@ declare module '@tanstack/react-router' {
       path: '/projects'
       fullPath: '/projects'
       preLoaderRoute: typeof ProjectsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pending-approval': {
+      id: '/pending-approval'
+      path: '/pending-approval'
+      fullPath: '/pending-approval'
+      preLoaderRoute: typeof PendingApprovalRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/payroll': {
@@ -489,6 +509,7 @@ const rootRouteChildren: RootRouteChildren = {
   LeaveRoute: LeaveRoute,
   MyRoute: MyRoute,
   PayrollRoute: PayrollRoute,
+  PendingApprovalRoute: PendingApprovalRoute,
   ProjectsRoute: ProjectsRoute,
   ReportsRoute: ReportsRoute,
   ResetPasswordRoute: ResetPasswordRoute,

@@ -50,7 +50,7 @@ export function AppShell({
   const [open, setOpen]       = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
   const { pathname }          = useLocation();
-  const { user, loading, logout } = useSession();
+  const { user, loading, logout, approvalStatus } = useSession();
   const navigate              = useNavigate();
   const queryClient           = useQueryClient();
 
@@ -61,6 +61,13 @@ export function AppShell({
       navigate({ to: "/auth" });
     }
   }, [loading, user, navigate]);
+
+  // Redirect pending-approval accounts away from the main dashboard
+  useEffect(() => {
+    if (!loading && user && approvalStatus === "pending" && pathname !== "/pending-approval") {
+      navigate({ to: "/pending-approval" });
+    }
+  }, [loading, user, approvalStatus, pathname, navigate]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {

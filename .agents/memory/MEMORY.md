@@ -1,4 +1,5 @@
 - [Supabase+Firebase auth](supabase-firebase-auth.md) — full auth system: Google OAuth + Email/Password (Supabase) + Phone OTP (Firebase); browser-only Supabase client to avoid Node.js 20 WebSocket SSR crash
+- [Role+approval system](role-approval-system.md) — Worker=instant; Supervisor/Admin=pending approval; approval_requests table; /pending-approval route; AppShell redirects pending users
 - [New tables needed](new-tables.md) — tasks + attendance_corrections require SQL migration before features work
 - [Bulk payroll](bulk-payroll.md) — BulkPayrollModal uses createPayroll directly (not mutation callback) to enable sequential async; useQueryClient to invalidate after all records created
 - [Auth onConflict fix](auth-onconflict.md) — user_roles unique constraint is (user_id, role) not just user_id; always use onConflict: "user_id,role"

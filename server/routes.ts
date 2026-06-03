@@ -6,6 +6,7 @@ interface AuthUser {
   profileImage: string | null;
   phoneNumber?: string | null;
   email?: string | null;
+  metaRole?: string | null; // role from user_metadata (set at signup)
 }
 
 function parseCookies(cookieHeader: string | null): Record<string, string> {
@@ -48,6 +49,7 @@ async function requireUser(headers: Headers): Promise<AuthUser> {
               profileImage: String(meta.avatar_url ?? meta.picture ?? ""),
               phoneNumber: data.phone ?? null,
               email: data.email ?? null,
+              metaRole: meta.role ? String(meta.role) : null,
             };
           }
         }
@@ -165,18 +167,107 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
     try {
       const user = await requireUser(req.headers);
       // Upsert profile — keeps profiles table in sync with auth provider
+      // Role is NOT updated on conflict (preserves approved role)
       await query(
         `INSERT INTO profiles (id, full_name, email, role, updated_at)
          VALUES ($1,$2,$3,'Worker',NOW())
          ON CONFLICT (id) DO UPDATE
-           SET full_name = COALESCE(EXCLUDED.full_name, profiles.full_name),
-               email     = COALESCE(EXCLUDED.email, profiles.email),
+           SET full_name  = COALESCE(EXCLUDED.full_name, profiles.full_name),
+               email      = COALESCE(EXCLUDED.email, profiles.email),
                updated_at = NOW()`,
         [user.id, user.name, user.email ?? null],
       );
+      // Create approval request for non-Worker roles (first login only)
+      const requestedRole = user.metaRole;
+      if (requestedRole && ["Supervisor","Admin","Manager"].includes(requestedRole)) {
+        const existing = await query(
+          `SELECT id FROM approval_requests WHERE user_id=$1 LIMIT 1`,
+          [user.id],
+        );
+        if (existing.rows.length === 0) {
+          await query(
+            `INSERT INTO approval_requests (user_id, full_name, email, phone, role_requested)
+             VALUES ($1,$2,$3,$4,$5)`,
+            [user.id, user.name, user.email ?? null, user.phoneNumber ?? null, requestedRole],
+          );
+        }
+      }
       return json({ user });
     } catch {
       return json({ user: null });
+    }
+  }
+
+  // ── GET /api/auth/profile — role + approval status ────────────────────────
+  if (path === "/api/auth/profile" && method === "GET") {
+    try {
+      const user = await requireUser(req.headers);
+      const pRes = await query(
+        `SELECT id, full_name, email, phone, role, avatar_url FROM profiles WHERE id=$1`,
+        [user.id],
+      );
+      const profile = pRes.rows[0] ?? null;
+      // Check for any approval request (pending, approved, or rejected)
+      let approvalStatus: string | null = null;
+      const arRes = await query(
+        `SELECT status FROM approval_requests WHERE user_id=$1 ORDER BY created_at DESC LIMIT 1`,
+        [user.id],
+      );
+      if (arRes.rows[0]) approvalStatus = arRes.rows[0].status as string;
+      return json({ profile, approvalStatus });
+    } catch (e) {
+      return err(e instanceof Error ? e.message : "Unauthorized", 401);
+    }
+  }
+
+  // ── GET /api/admin/approvals ──────────────────────────────────────────────
+  if (path === "/api/admin/approvals" && method === "GET") {
+    try {
+      const user = await requireUser(req.headers);
+      const pRes = await query(`SELECT role FROM profiles WHERE id=$1`, [user.id]);
+      if (!["Admin","Manager"].includes(pRes.rows[0]?.role)) return err("Forbidden", 403);
+      const status = new URL(req.url).searchParams.get("status") ?? "pending";
+      const r = await query(
+        `SELECT ar.* FROM approval_requests ar WHERE ar.status=$1 ORDER BY ar.created_at ASC`,
+        [status],
+      );
+      return json(r.rows);
+    } catch (e) {
+      return err(e instanceof Error ? e.message : "Unauthorized", 401);
+    }
+  }
+
+  // ── PUT /api/admin/approvals/:id ──────────────────────────────────────────
+  const arMatch = path.match(/^\/api\/admin\/approvals\/([^/]+)$/);
+  if (arMatch && method === "PUT") {
+    try {
+      const user = await requireUser(req.headers);
+      const pRes = await query(`SELECT role FROM profiles WHERE id=$1`, [user.id]);
+      if (!["Admin","Manager"].includes(pRes.rows[0]?.role)) return err("Forbidden", 403);
+      const arId = arMatch[1];
+      const b = await parseBody(req);
+      if (!["approved","rejected"].includes(b.status)) return err("Invalid status");
+      await query(
+        `UPDATE approval_requests
+         SET status=$1, reviewed_by=$2, reviewed_at=NOW(), notes=$3, updated_at=NOW()
+         WHERE id=$4`,
+        [b.status, user.id, b.notes ?? null, arId],
+      );
+      if (b.status === "approved") {
+        const ar = (await query(
+          `SELECT user_id, role_requested FROM approval_requests WHERE id=$1`,
+          [arId],
+        )).rows[0];
+        if (ar) {
+          await query(
+            `UPDATE profiles SET role=$1, updated_at=NOW() WHERE id=$2`,
+            [ar.role_requested, ar.user_id],
+          );
+        }
+      }
+      return json({ ok: true });
+    } catch (e) {
+      return err(e instanceof Error ? e.message : "Unauthorized", 401);
     }
   }
 
