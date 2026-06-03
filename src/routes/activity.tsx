@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Activity, Filter, Shield, User as UserIcon, Database, LogIn } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { useRole } from "@/hooks/use-role";
+import { getAuthToken } from "@/lib/auth-token";
 
 export const Route = createFileRoute("/activity")({
   head: () => ({
@@ -56,7 +57,11 @@ function ActivityPage() {
     setLoading(true);
     const params = new URLSearchParams({ limit: "200" });
     if (cat !== "all") params.set("category", cat);
-    fetch(`/api/activity_logs?${params}`)
+    getAuthToken().then((token) => {
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      return fetch(`/api/activity_logs?${params}`, { headers });
+    })
       .then((r) => r.json())
       .then((data) => {
         if (!cancelled) {

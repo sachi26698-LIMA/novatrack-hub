@@ -9,6 +9,7 @@ import { AppShell } from "@/components/app-shell";
 import { GlassCard } from "@/components/glass-card";
 import { useSession } from "@/hooks/use-session";
 import { listWorkers, listAttendance, listPayroll } from "@/lib/queries";
+import { getAuthToken } from "@/lib/auth-token";
 import { listLeave, listShifts } from "@/lib/queries-extra";
 import { listTasks } from "@/lib/queries-tasks";
 export const Route = createFileRoute("/my")({
@@ -54,7 +55,10 @@ function MyPage() {
   const { data: profile } = useQuery({
     queryKey: ["profile-me", user?.id],
     queryFn: async () => {
-      const res = await fetch(`/api/profiles/${user!.id}`);
+      const token = await getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch(`/api/profiles/${user!.id}`, { headers });
       if (!res.ok) return null;
       return res.json();
     },
@@ -67,13 +71,13 @@ function MyPage() {
     queryKey: ["shifts", shiftFrom, shiftTo], queryFn: () => listShifts(shiftFrom, shiftTo), enabled,
   });
 
-  const displayName = profile?.full_name || user?.user_metadata?.full_name || user?.email?.split("@")[0] || "You";
+  const displayName = profile?.full_name || user?.name || "You";
   const initials = displayName.split(" ").map((p: string) => p[0]).slice(0, 2).join("").toUpperCase();
 
   // Try to match a worker record
   const myWorker = useMemo(() => {
-    const name = (profile?.full_name || user?.user_metadata?.full_name || "").toLowerCase();
-    const email = (user?.email || "").toLowerCase();
+    const name = (profile?.full_name || user?.name || "").toLowerCase();
+    const email = "";
     return workers.find((w) =>
       w.full_name?.toLowerCase() === name ||
       (w as any).email?.toLowerCase() === email

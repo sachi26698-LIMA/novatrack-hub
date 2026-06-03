@@ -289,12 +289,14 @@ export async function handleApiRequest(req: Request, path: string): Promise<Resp
     try {
       const user = await requireUser(req.headers);
       const b = await parseBody(req);
+      const newId = crypto.randomUUID();
+      const qrCode = `TN-${newId.slice(0, 8).toUpperCase()}`;
       const r = await query(
-        `INSERT INTO workers (owner_id, full_name, email, phone, role, department, hourly_rate, monthly_salary, avatar_url, status, joined_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
-        [user.id, b.full_name, b.email ?? null, b.phone ?? null, b.role ?? null, b.department ?? null,
+        `INSERT INTO workers (id, owner_id, full_name, email, phone, role, department, hourly_rate, monthly_salary, avatar_url, status, joined_at, qr_code)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
+        [newId, user.id, b.full_name, b.email ?? null, b.phone ?? null, b.role ?? null, b.department ?? null,
          b.hourly_rate ?? 0, b.monthly_salary ?? 0, b.avatar_url ?? null, b.status ?? "Active",
-         b.joined_at ?? new Date().toISOString().slice(0, 10)],
+         b.joined_at ?? new Date().toISOString().slice(0, 10), qrCode],
       );
       return json(r.rows[0]);
     } catch (e: unknown) {

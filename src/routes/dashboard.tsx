@@ -16,6 +16,7 @@ import { useSession } from "@/hooks/use-session";
 import { listWorkers, listProjects, listAttendance, listPayroll } from "@/lib/queries";
 import { listInvoices } from "@/lib/queries-billing";
 import { listTasks } from "@/lib/queries-tasks";
+import { getAuthToken } from "@/lib/auth-token";
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
     meta: [
@@ -71,7 +72,10 @@ function Dashboard() {
   const { data: activityLogs = [] } = useQuery({
     queryKey: ["activity-recent"],
     queryFn: async () => {
-      const res = await fetch("/api/activity_logs?limit=5");
+      const token = await getAuthToken();
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch("/api/activity_logs?limit=5", { headers });
       if (!res.ok) return [];
       return res.json();
     },
@@ -90,9 +94,7 @@ function Dashboard() {
     return () => clearInterval(interval);
   }, [enabled, qc]);
 
-  const displayName = user?.user_metadata?.full_name
-    ? user.user_metadata.full_name.split(" ")[0]
-    : user?.email?.split("@")[0] ?? "there";
+  const displayName = (user?.name ?? "there").split(" ")[0];
 
   const activeWorkers = useMemo(() => workers.filter((w) => w.status === "Active").length, [workers]);
 

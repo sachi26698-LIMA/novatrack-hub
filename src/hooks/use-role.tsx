@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useSession } from "@/hooks/use-session";
+import { getAuthToken } from "@/lib/auth-token";
 
 export type AppRole = "Admin" | "Manager" | "Supervisor" | "Worker";
 
@@ -24,18 +25,22 @@ export function useRole() {
     let cancelled = false;
     setLoading(true);
 
-    fetch("/api/role")
-      .then((r) => r.json())
-      .then(({ role: r }: { role: AppRole }) => {
+    (async () => {
+      try {
+        const token = await getAuthToken();
+        const headers: Record<string, string> = {};
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+        const r = await fetch("/api/role", { headers });
+        const { role: fetchedRole } = (await r.json()) as { role: AppRole };
         if (cancelled || !mounted.current) return;
-        setRole(r ?? "Worker");
-        setLoading(false);
-      })
-      .catch(() => {
+        setRole(fetchedRole ?? "Worker");
+      } catch {
         if (cancelled || !mounted.current) return;
         setRole("Worker");
-        setLoading(false);
-      });
+      } finally {
+        if (!cancelled && mounted.current) setLoading(false);
+      }
+    })();
 
     return () => { cancelled = true; };
   }, [user?.id, sessionLoading]);

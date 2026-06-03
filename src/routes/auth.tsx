@@ -88,7 +88,9 @@ function AuthPage() {
   const [password, setPassword]       = useState("");
   const [showPwd, setShowPwd]         = useState(false);
   const [rememberMe, setRememberMe]   = useState(true);
-  const [phone, setPhone]             = useState("");
+  const [countryCode, setCountryCode] = useState("+91");
+  const [phoneLocal, setPhoneLocal]   = useState("");
+  const phone = `${countryCode}${phoneLocal.replace(/\D/g, "")}`;
   const [otp, setOtp]                 = useState("");
   const [busy, setBusy]               = useState(false);
   const [error, setError]             = useState("");
@@ -178,11 +180,11 @@ function AuthPage() {
   // ── Send OTP ──────────────────────────────────────────────────────────────
   async function handleSendOtp(e: React.FormEvent) {
     e.preventDefault();
-    const formatted = phone.startsWith("+") ? phone : `+${phone.replace(/\D/g, "")}`;
-    if (formatted.replace(/\D/g, "").length < 7) {
-      setError("Enter a valid international number — e.g. +91 98765 43210 or +1 555 000 1234.");
+    if (phoneLocal.replace(/\D/g, "").length < 7) {
+      setError("Enter a valid phone number (at least 7 digits).");
       return;
     }
+    const formatted = phone;
     if (!isFirebaseConfigured()) {
       setError("Firebase is not configured. Add VITE_FIREBASE_* secrets to enable phone sign-in.");
       return;
@@ -190,7 +192,6 @@ function AuthPage() {
     setBusy(true); resetMessages();
     try {
       await sendPhoneOTP(formatted, "recaptcha-container-login");
-      setPhone(formatted);
       setView("otp");
       setOtpSent(true);
       setResendCountdown(60);
@@ -275,6 +276,11 @@ function AuthPage() {
             <GhostBtn onClick={handleGoogle} disabled={busy || !isSupabaseConfigured}>
               <GoogleLogo /> Continue with Google
             </GhostBtn>
+            {isSupabaseConfigured && (
+              <p className="text-[10px] text-muted-foreground text-center -mt-1">
+                Google sign-in requires Google provider enabled in Supabase → Authentication → Providers
+              </p>
+            )}
 
             <AuthDivider label="or sign in with email" />
 
@@ -343,13 +349,46 @@ function AuthPage() {
             <AuthError   msg={error} />
             <AuthWarning msg={warning} />
             <form onSubmit={handleSendOtp} className="space-y-3">
-              <AuthInput icon={Phone} type="tel" value={phone} onChange={setPhone}
-                placeholder="+91 98765 43210 or +1 555 000 1234"
-                autoComplete="tel" disabled={busy} />
+              {/* Country code + number */}
+              <div className="flex items-center gap-2 rounded-xl px-3 py-2.5 transition"
+                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)" }}>
+                <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
+                <select
+                  value={countryCode}
+                  onChange={(e) => setCountryCode(e.target.value)}
+                  disabled={busy}
+                  className="bg-transparent text-sm outline-none text-foreground pr-1 shrink-0"
+                  style={{ width: 72 }}
+                >
+                  <option value="+91">🇮🇳 +91</option>
+                  <option value="+1">🇺🇸 +1</option>
+                  <option value="+44">🇬🇧 +44</option>
+                  <option value="+971">🇦🇪 +971</option>
+                  <option value="+92">🇵🇰 +92</option>
+                  <option value="+880">🇧🇩 +880</option>
+                  <option value="+94">🇱🇰 +94</option>
+                  <option value="+977">🇳🇵 +977</option>
+                  <option value="+60">🇲🇾 +60</option>
+                  <option value="+65">🇸🇬 +65</option>
+                  <option value="+61">🇦🇺 +61</option>
+                  <option value="+49">🇩🇪 +49</option>
+                  <option value="+33">🇫🇷 +33</option>
+                </select>
+                <div className="h-4 w-px bg-white/10 shrink-0" />
+                <input
+                  type="tel" inputMode="numeric"
+                  value={phoneLocal}
+                  onChange={(e) => setPhoneLocal(e.target.value.replace(/[^\d\s\-()]/g, ""))}
+                  placeholder="98765 43210"
+                  autoComplete="tel-national"
+                  disabled={busy}
+                  className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
+                />
+              </div>
               <p className="text-[10px] text-muted-foreground -mt-1">
-                Include your country code. Standard SMS rates may apply.
+                Standard SMS rates may apply. OTP valid for 10 minutes.
               </p>
-              <PrimaryBtn type="submit" loading={busy}>
+              <PrimaryBtn type="submit" loading={busy} disabled={phoneLocal.replace(/\D/g,"").length < 7}>
                 <Phone className="h-4 w-4" /> Send OTP
               </PrimaryBtn>
             </form>

@@ -1,3 +1,5 @@
+import { getAuthToken } from "./auth-token";
+
 export type ActivityCategory = "auth" | "data" | "general";
 
 export async function logActivity(
@@ -6,15 +8,13 @@ export async function logActivity(
   details: Record<string, unknown> = {},
 ) {
   try {
+    const token = await getAuthToken();
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
     await fetch("/api/activity", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action,
-        category,
-        details,
-        user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
-      }),
+      headers,
+      body: JSON.stringify({ action, category, details }),
     });
   } catch (err) {
     console.warn("[activity-log] failed", err);
